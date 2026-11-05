@@ -35,6 +35,7 @@
 
 <div id="cfg">
   <strong>GitHub Gist sync</strong><br><small>Token needs the Gists write permission (classic token: <code>gist</code> scope). Leave Gist ID empty on first use: it is created on first save. Stored in this browser only.</small>
+  <input id="repo" placeholder="Site repo owner/name (auto on github.io)">
   <input id="gist" placeholder="Gist ID (optional on first use)">
   <input id="token" type="password" placeholder="GitHub token">
   <button class="act" id="savecfg">Save settings</button>
@@ -45,7 +46,7 @@
 <script>
 const $ = s => document.querySelector(s);
 const cfg = JSON.parse(localStorage.getItem('cfg') || '{}'); // {gist, token}
-let links = [];
+let links = [], auto = [];
 
 const hdr = () => ({ Accept: 'application/vnd.github+json', ...(cfg.token && { Authorization: 'Bearer ' + cfg.token }) });
 const status = t => $('#status').textContent = t;
@@ -83,6 +84,28 @@ async function save() {
   } else status('Synced to gist.');
 }
 
+function repoGuess() {
+  if (cfg.repo) return cfg.repo;
+  const m = location.hostname.match(/^(.+)\.github\.io$/);
+  const seg = location.pathname.split('/')[1];
+  // shortcut: guesses repo from the Pages URL; set it in settings for custom domains or nested pages
+  return m ? m[1] + '/' + (seg && !/\.html?$/i.test(seg) ? seg : location.hostname) : '';
+}
+
+async function loadSite() {
+  const repo = repoGuess(); auto = [];
+  if (repo) {
+    try {
+      const r = await fetch('https://api.github.com/repos/' + repo + '/git/trees/HEAD?recursive=1', { headers: hdr() });
+      if (!r.ok) throw new Error('GitHub ' + r.status);
+      auto = (await r.json()).tree
+        .filter(f => f.type === 'blob' && /\.html?$/i.test(f.path) && f.path !== 'index.html')
+        .map(f => ({ name: f.path.replace(/(\/index)?\.html?$/i, ''), url: encodeURI(f.path) }));
+    } catch (e) { status('Repo scan failed (' + e.message + ').'); }
+  }
+  render();
+}
+
 function render() {
   const g = $('#grid'); g.textContent = '';
   links.forEach((l, i) => {
@@ -92,6 +115,10 @@ function render() {
     const x = document.createElement('button'); x.className = 'del'; x.textContent = '×'; x.title = 'Delete';
     x.onclick = () => { links.splice(i, 1); render(); save(); };
     d.append(a, x); g.append(d);
+  });
+  auto.forEach(l => {
+    const a = document.createElement('a'); a.className = 'btn'; a.href = l.url; a.textContent = l.name;
+    g.append(a);
   });
 }
 
@@ -111,13 +138,14 @@ $('#toggle').onclick = () => {
   $('#toggle').textContent = document.body.classList.contains('editing') ? 'Done' : 'Edit';
 };
 
+$('#repo').value = cfg.repo || '';
 $('#gist').value = cfg.gist || '';
 $('#token').value = cfg.token || '';
 $('#savecfg').onclick = () => {
-  cfg.gist = $('#gist').value.trim(); cfg.token = $('#token').value.trim();
-  saveCfg(); load();
+  cfg.repo = $('#repo').value.trim(); cfg.gist = $('#gist').value.trim(); cfg.token = $('#token').value.trim();
+  saveCfg(); load(); loadSite();
 };
 
-load();
+load(); loadSite();
 </script>
 </html>
