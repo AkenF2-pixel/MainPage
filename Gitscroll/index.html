@@ -1,0 +1,834 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>GitScroll Live</title>
+<style>
+:root{--bg:#f5f4f0;--fg:#17171b;--mut:#5f5f69;--chip:rgba(0,0,0,.07);--bar:rgba(245,244,240,.85);--btn:rgba(255,255,255,.75);--accent:#e0245e;
+box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#101013;--fg:#f2f2f5;--mut:#a0a0ab;--chip:rgba(255,255,255,.1);--bar:rgba(16,16,19,.85);--btn:rgba(40,40,46,.8)}}
+:root[data-theme="dark"]{--bg:#101013;--fg:#f2f2f5;--mut:#a0a0ab;--chip:rgba(255,255,255,.1);--bar:rgba(16,16,19,.85);--btn:rgba(40,40,46,.8)}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+html,body{height:100%;margin:0}
+body{background:var(--bg);color:var(--fg);font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;overflow:hidden}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--bar);backdrop-filter:blur(10px)}
+header{position:fixed;top:0;left:0;right:0;z-index:9;padding:calc(env(safe-area-inset-top,0px) + 10px) 12px 10px;display:flex;justify-content:center;gap:6px;background:var(--bar);backdrop-filter:blur(10px)}
+header button{border:0;background:transparent;color:var(--mut);font:600 15px system-ui,sans-serif;padding:7px 14px;border-radius:99px;cursor:pointer}
+header button.on{background:var(--fg);color:var(--bg)}
+#feed{height:100%;overflow-y:scroll;scroll-snap-type:y mandatory;-webkit-overflow-scrolling:touch;scrollbar-width:none}
+#feed::-webkit-scrollbar{display:none}
+.card{position:relative;height:100%;scroll-snap-align:start;scroll-snap-stop:always;display:flex;align-items:flex-end;overflow:hidden;
+background:linear-gradient(165deg,color-mix(in srgb,var(--c) 34%,var(--bg)),var(--bg) 72%)}
+.card::after{content:attr(data-lang);position:absolute;right:-10px;top:18%;font:800 clamp(90px,24vw,220px)/1 system-ui,sans-serif;color:var(--c);opacity:.09;white-space:nowrap;pointer-events:none}
+.info{position:relative;z-index:1;padding:0 76px 28px 20px;max-width:640px;width:100%;box-sizing:border-box}
+.who{display:flex;align-items:center;gap:9px;color:var(--mut);font-weight:600;font-size:14px}
+.av{width:30px;height:30px;border-radius:50%;display:grid;place-items:center;background:var(--c);color:#fff;font-weight:700}
+h2{margin:12px 0 8px;font-size:clamp(30px,8vw,46px);line-height:1.05;letter-spacing:-.02em;word-break:break-word}
+.desc{margin:0 0 14px;font-size:17px;line-height:1.45}
+.meta{display:flex;gap:16px;color:var(--mut);font-size:14px;font-weight:600}
+.dot{display:inline-block;width:10px;height:10px;border-radius:50%;background:var(--c);margin-right:6px}
+.tags{display:flex;flex-wrap:wrap;gap:6px;margin-top:12px}
+.tags b{font-weight:600;font-size:13px;background:var(--chip);padding:4px 10px;border-radius:99px}
+.why{margin-top:14px;font-size:13px;color:var(--mut);min-height:1.2em}
+.why em{font-style:normal;color:var(--accent);font-weight:700}
+.rail{position:absolute;right:12px;bottom:34px;z-index:2;display:flex;flex-direction:column;gap:14px}
+.b{width:48px;height:48px;border-radius:50%;border:0;background:var(--btn);color:var(--fg);display:grid;place-items:center;cursor:pointer;font-size:22px;text-decoration:none;box-shadow:0 2px 10px rgba(0,0,0,.15);backdrop-filter:blur(6px)}
+.b svg{width:24px;height:24px;fill:none;stroke:currentColor;stroke-width:2;stroke-linejoin:round}
+.like.on{color:var(--accent)}.like.on svg{fill:var(--accent)}
+.save.on svg{fill:var(--fg)}
+.pop{position:absolute;left:50%;top:45%;transform:translate(-50%,-50%) scale(0);font-size:110px;color:var(--accent);opacity:0;pointer-events:none;z-index:3}
+.pop.go{animation:pop .7s ease-out}
+@keyframes pop{0%{transform:translate(-50%,-50%) scale(.3);opacity:1}40%{transform:translate(-50%,-50%) scale(1.1);opacity:1}100%{transform:translate(-50%,-50%) scale(1.3);opacity:0}}
+.msg{height:100%;scroll-snap-align:start;display:grid;place-items:center;text-align:center;padding:30px;color:var(--mut);line-height:1.5}
+.msg h3{color:var(--fg);margin:0 0 8px;font-size:22px}
+.msg button{margin-top:14px;border:0;background:var(--fg);color:var(--bg);font:600 15px system-ui,sans-serif;padding:10px 18px;border-radius:99px;cursor:pointer}
+.hint{position:fixed;left:50%;bottom:calc(env(safe-area-inset-bottom,0px) + 12px);transform:translateX(-50%);z-index:8;font-size:12px;color:var(--mut);background:var(--bar);padding:5px 12px;border-radius:99px;transition:opacity .4s;pointer-events:none}
+.av{overflow:hidden;position:relative}.av img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}header{flex-wrap:wrap}header button svg{width:17px;height:17px;fill:none;stroke:currentColor;stroke-width:2.2;vertical-align:-3px}#sbar{flex:0 0 100%;display:none;justify-content:center}#sbar input{width:100%;max-width:560px;box-sizing:border-box;border:0;border-radius:99px;background:var(--chip);color:var(--fg);padding:10px 16px;font:16px system-ui,sans-serif;outline:none}#sbar input::placeholder{color:var(--mut)}#prof{display:none;height:100%;overflow-y:auto;box-sizing:border-box;padding:58px 0 24px;-webkit-overflow-scrolling:touch}
+.pw{max-width:640px;margin:0 auto}
+.ph{display:flex;align-items:center;gap:20px;padding:18px 18px 8px}
+.pav{flex:none;width:86px;height:86px;border-radius:50%;padding:3px;box-sizing:border-box;background:linear-gradient(45deg,#f9a03f,#e0245e,#8a3ab9)}
+.pav>span{display:grid;place-items:center;width:100%;height:100%;border-radius:50%;background:var(--bg);border:3px solid var(--bg);box-sizing:border-box;font:700 22px ui-monospace,Menlo,monospace}
+.pst{flex:1;display:flex;justify-content:space-around;text-align:center;font-size:13px;color:var(--mut)}
+.pst b{display:block;font-size:19px;color:var(--fg)}
+.pbio{padding:4px 18px 16px;font-size:14px;line-height:1.5;color:var(--mut)}
+.pbio strong{display:block;font-size:15px;color:var(--fg)}
+.pbio span{color:var(--accent);font-weight:600;margin-right:8px}
+.pt{display:flex;border-top:1px solid var(--chip)}
+.pt button{flex:1;border:0;border-top:2px solid transparent;margin-top:-1px;background:none;color:var(--mut);padding:12px;cursor:pointer;font:600 13px system-ui,sans-serif}
+.pt button.on{color:var(--fg);border-top-color:var(--fg)}
+.pt svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:2;stroke-linejoin:round;vertical-align:-3px;margin-right:6px}
+.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:2px}
+.tile{position:relative;aspect-ratio:1;border:0;padding:9px;cursor:pointer;color:var(--fg);text-align:left;display:flex;flex-direction:column;justify-content:flex-end;gap:3px;overflow:hidden;font-family:system-ui,sans-serif;background:linear-gradient(160deg,color-mix(in srgb,var(--c) 48%,var(--bg)),color-mix(in srgb,var(--c) 16%,var(--bg)))}
+.tile b{font-size:clamp(12px,3.6vw,18px);line-height:1.1;letter-spacing:-.01em;word-break:break-word}
+.tile small{font-size:11px;opacity:.75}
+.tb{position:absolute;top:8px;right:8px}
+.tb svg{width:15px;height:15px;fill:var(--fg);stroke:var(--fg);stroke-width:2;opacity:.85}
+.pe{padding:48px 28px;text-align:center;color:var(--mut);line-height:1.5}
+.pe strong{display:block;color:var(--fg);font-size:18px;margin-bottom:6px}
+#back{display:none;position:fixed;left:10px;top:calc(env(safe-area-inset-top,0px) + 62px);z-index:9;border:0;background:var(--btn);color:var(--fg);font:600 14px system-ui,sans-serif;padding:8px 14px;border-radius:99px;cursor:pointer;backdrop-filter:blur(6px);box-shadow:0 2px 10px rgba(0,0,0,.15)}
+.star.on{color:#e3b341}.star.on svg{fill:#e3b341;stroke:#e3b341}
+.pav img{width:100%;height:100%;border-radius:50%;object-fit:cover}
+.pbtn{padding:0 18px 16px}
+.pbtn button{width:100%;border:0;border-radius:10px;background:var(--chip);color:var(--fg);padding:9px;font:600 14px system-ui,sans-serif;cursor:pointer}
+#sheet{position:fixed;inset:0;z-index:20;background:rgba(0,0,0,.5);display:none;align-items:flex-end;justify-content:center}
+#sheet.open{display:flex}
+.sc{background:var(--bg);color:var(--fg);width:100%;max-width:520px;border-radius:20px 20px 0 0;padding:22px 20px calc(22px + env(safe-area-inset-bottom,0px));box-sizing:border-box;max-height:92%;overflow:auto}
+.sc h3{margin:0 0 8px;font-size:20px}
+.sc p{margin:0 0 10px;color:var(--mut);font-size:14px;line-height:1.5}
+.sc a.lnk{display:inline-block;margin:2px 0 12px;color:var(--accent);font-weight:600;font-size:14px}
+.sc input{width:100%;box-sizing:border-box;border:0;border-radius:12px;background:var(--chip);color:var(--fg);padding:12px 14px;font:16px system-ui,sans-serif;outline:none}
+.sc .row{display:flex;gap:8px;margin-top:12px}
+.sc button{flex:1;border:0;border-radius:99px;padding:11px;font:600 15px system-ui,sans-serif;cursor:pointer;background:var(--chip);color:var(--fg)}
+.sc button.pri{background:var(--fg);color:var(--bg)}
+#terr{color:var(--accent);font-size:13px;min-height:1.2em;margin-top:8px}
+#toast{position:fixed;left:50%;bottom:calc(env(safe-area-inset-bottom,0px) + 24px);transform:translateX(-50%) translateY(20px);opacity:0;z-index:30;background:var(--fg);color:var(--bg);padding:10px 16px;border-radius:99px;font:600 14px system-ui,sans-serif;transition:.25s;pointer-events:none;max-width:90%;text-align:center}
+#toast.on{opacity:1;transform:translateX(-50%)}
+.tp{padding:6px 18px 8px}
+.tp h4{margin:18px 0 8px;font-size:14px}
+.tp p{margin:0 0 8px;color:var(--mut);font-size:13px;line-height:1.45}
+.tp .hn{margin-top:18px}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chip{display:inline-flex;align-items:center;gap:2px;background:var(--chip);border-radius:99px;padding:5px 5px 5px 12px;font-size:14px;font-weight:600}
+.chip.in{background:color-mix(in srgb,var(--accent) 18%,var(--bg));color:var(--accent)}
+.chip.out{opacity:.8}
+.chip button{border:0;background:none;color:inherit;font:inherit;cursor:pointer;padding:2px 8px;border-radius:99px;text-decoration:none}
+.chip.sg button:first-of-type{background:var(--accent);color:#fff;font-size:13px}
+.none{color:var(--mut);font-size:13px}
+.add{display:flex;gap:8px;margin-top:10px}
+.add input{flex:1;min-width:0;border:0;border-radius:99px;background:var(--chip);color:var(--fg);padding:10px 14px;font:16px system-ui,sans-serif;outline:none}
+.add button{border:0;border-radius:99px;background:var(--fg);color:var(--bg);padding:0 18px;font:600 14px system-ui,sans-serif;cursor:pointer}
+.bdg{background:var(--accent);color:#fff;border-radius:99px;font-size:11px;padding:1px 6px;margin-left:6px}
+#sug{position:fixed;left:50%;top:calc(env(safe-area-inset-top,0px) + 116px);transform:translate(-50%,-10px);opacity:0;pointer-events:none;z-index:12;display:flex;align-items:center;gap:8px;flex-wrap:wrap;justify-content:center;background:var(--bar);backdrop-filter:blur(12px);border:1px solid var(--chip);border-radius:16px;padding:10px 12px;max-width:92%;width:max-content;font-size:14px;box-shadow:0 6px 24px rgba(0,0,0,.18);transition:.25s}
+#sug.on{opacity:1;transform:translate(-50%,0);pointer-events:auto}
+#sug em{font-style:normal;color:var(--accent);font-weight:700}
+#sug button{border:0;border-radius:99px;padding:7px 12px;font:600 13px system-ui,sans-serif;cursor:pointer;background:var(--chip);color:var(--fg)}
+#sug button[data-a="y"]{background:var(--fg);color:var(--bg)}
+.tags b{cursor:pointer}.tags b.in{background:var(--accent);color:#fff}.tags b.out{text-decoration:line-through;opacity:.6}
+.pbtn.row{display:flex;gap:8px;margin-top:-8px}
+.pbtn.row button{flex:1}
+.sst{padding:0 18px 12px;font-size:12px;color:var(--mut);text-align:center}
+.pt button{padding:12px 4px}.pt svg{margin-right:4px}
+.pe button{margin-top:12px;border:0;border-radius:99px;background:var(--fg);color:var(--bg);padding:10px 18px;font:600 14px system-ui,sans-serif;cursor:pointer}
+.sh{padding:2px 18px 6px;font-size:12px;color:var(--mut);font-weight:600}
+.srow{display:flex;gap:14px;overflow-x:auto;padding:4px 18px 14px;scrollbar-width:none}
+.srow::-webkit-scrollbar{display:none}
+.st{flex:none;width:68px;border:0;background:none;color:var(--fg);cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:5px;padding:0;font-family:system-ui,sans-serif}
+.st small{width:68px;font-size:11px;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--mut)}
+.ring{display:block;width:66px;height:66px;border-radius:50%;padding:3px;box-sizing:border-box;background:var(--chip)}
+.ring.new{background:linear-gradient(45deg,#f9a03f,#e0245e,#8a3ab9)}
+.ring .in{display:grid;place-items:center;width:100%;height:100%;border-radius:50%;border:3px solid var(--bg);box-sizing:border-box;overflow:hidden;position:relative;background:var(--chip);font-weight:700}
+.ring img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+#story{position:fixed;inset:0;z-index:40;display:none;background:var(--bg)}
+#story.open{display:block}
+.sv{position:absolute;inset:0;display:flex;flex-direction:column;padding:calc(env(safe-area-inset-top,0px) + 12px) 18px calc(env(safe-area-inset-bottom,0px) + 18px);box-sizing:border-box;overflow:hidden;background:linear-gradient(165deg,color-mix(in srgb,var(--c) 40%,var(--bg)),var(--bg) 75%)}
+.sbar{height:3px;border-radius:3px;background:var(--chip);overflow:hidden;flex:none}
+.sbar b{display:block;height:100%;width:0;background:var(--fg)}
+.sbar b.go{animation:sfill 8s linear forwards}
+.sv.paused .sbar b{animation-play-state:paused}
+@keyframes sfill{to{width:100%}}
+.shd{display:flex;align-items:center;gap:10px;margin:12px 0;flex:none}
+.shd .av{width:34px;height:34px}
+.shd strong{font-size:15px}
+.shd .wh{color:var(--mut);font-size:13px}
+.shd .cnt{margin-left:auto;color:var(--mut);font-size:12px}
+.sx{position:relative;z-index:3;border:0;background:var(--btn);color:var(--fg);width:34px;height:34px;border-radius:50%;font-size:20px;line-height:1;cursor:pointer}
+.sbody{position:relative;z-index:2;flex:1;overflow:hidden;pointer-events:none;padding-top:6px}
+.sbody a{pointer-events:auto}
+.sbody h2{font-size:clamp(26px,7vw,38px);margin:6px 0 6px;letter-spacing:-.02em;word-break:break-word}
+.sbody h3{margin:14px 0 6px;font-size:18px}
+.sbody p{margin:0 0 10px;line-height:1.5;font-size:15px}
+.sbody .mut{color:var(--mut);font-size:14px}
+.sbody ul{list-style:none;margin:8px 0 14px;padding:0}
+.sbody li{padding:10px 12px;margin-bottom:8px;border-radius:12px;background:var(--chip);font-size:14px;line-height:1.35}
+.sbody li small{display:block;color:var(--mut);font-size:12px;margin-top:3px}
+.sbody a.lnk2{display:inline-block;margin:6px 14px 4px 0;color:var(--accent);font-weight:600;font-size:14px}
+.pill{display:inline-block;background:var(--accent);color:#fff;font-size:12px;font-weight:700;padding:3px 10px;border-radius:99px;margin-top:6px}
+.szl,.szr{position:absolute;top:0;bottom:0;z-index:1}
+.szl{left:0;width:32%}.szr{left:32%;right:0}
+</style>
+</head>
+<body>
+<header><button id="t-for" class="on">For You</button><button id="t-sav">Saved <span id="n">0</span></button><button id="t-q" aria-label="Search"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/></svg></button><div id="sbar"><input id="q" type="search" placeholder="Search repos, e.g. rust cli or language:go" enterkeyhint="search" autocomplete="off"></div></header>
+<main id="feed"></main><div id="prof"></div><button id="back">‹ Back</button><div id="sheet"></div><div id="sug"></div><div id="story"></div><div id="toast"></div>
+<div class="hint" id="hint">Swipe up · double-tap to like · live from GitHub</div>
+<script>
+var R={},seen={},failed=false,loading=false,empties=0,rid=0,sq="",spage=1,sdone=false;
+var S={liked:[],saved:[],data:{},token:"",user:null,tagsIn:[],tagsOut:[],dismissed:[],asked:[],ts:{},sync:false,gist:"",last:0,upd:{},seen:{},stInfo:[]};
+try{var p=JSON.parse(localStorage.getItem("gitscroll2")||"{}");S.liked=p.liked||[];S.saved=p.saved||[];S.data=p.data||{};S.token=p.token||"";S.user=p.user||null;S.tagsIn=p.tagsIn||[];S.tagsOut=p.tagsOut||[];S.dismissed=p.dismissed||[];S.asked=p.asked||[];S.ts=p.ts||{};S.sync=!!p.sync;S.gist=p.gist||"";S.last=p.last||0;S.upd=p.upd||{};S.seen=p.seen||{};S.stInfo=p.stInfo||[]}catch(e){}
+function persist(quiet){
+  reconcile();
+  try{localStorage.setItem("gitscroll2",JSON.stringify(S))}catch(e){}
+  if(!quiet&&S.sync&&S.token)schedPush();
+}
+var feed=document.getElementById("feed"),tab="for",cur="";
+var HEART='<svg viewBox="0 0 24 24"><path d="M12 21s-7-4.6-9.5-9C1 8.5 3 5 6.5 5c2 0 3.5 1 5.5 3 2-2 3.5-3 5.5-3C21 5 23 8.5 21.5 12 19 16.4 12 21 12 21z"/></svg>';
+var MARK='<svg viewBox="0 0 24 24"><path d="M6 3h12v18l-6-4-6 4z"/></svg>';
+var LC={JavaScript:"#d9b800",TypeScript:"#3178c6",Python:"#3572a5",Rust:"#c9815a",Go:"#00a7c9",C:"#6b6b80","C++":"#f34b7d",Lua:"#3b3bb0",CSS:"#7a43b6",Java:"#b07219",Ruby:"#cc342d",Swift:"#f05138",Kotlin:"#a97bff",Shell:"#4eaa25",Zig:"#ec915c",HTML:"#e34c26"};
+function col(l){if(!l||l==="Other")return"#7a7a8c";if(LC[l])return LC[l];var h=0;for(var i=0;i<l.length;i++)h=(h*31+l.charCodeAt(i))%360;return"hsl("+h+",55%,48%)"}
+function esc(s){return String(s==null?"":s).replace(/[&<>"]/g,function(c){return{"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]})}
+function ago(d){return new Date(Date.now()-d*864e5).toISOString().slice(0,10)}
+function fmt(k){return k>=1000?(k/1000).toFixed(k>=10000?0:1).replace(".0","")+"k":String(k)}
+function norm(x){return{full:x.full_name,desc:x.description||"No description provided.",lang:x.language||"Other",k:x.stargazers_count,tp:(x.topics||[]).slice(0,4),all:x.topics||[],pu:x.pushed_at,av:x.owner&&x.owner.avatar_url,jit:Math.random()*.6}}
+function get(n){var r=R[n]||S.data[n];if(r&&r.jit===undefined)r.jit=Math.random()*.6;return r}
+function profile(){
+  var t={},l={};
+  function add(n,w){var r=get(n);if(!r)return;l[r.lang]=(l[r.lang]||0)+w;r.tp.forEach(function(x){t[x]=(t[x]||0)+w})}
+  S.liked.forEach(function(n){add(n,1)});
+  S.saved.forEach(function(n){add(n,2)});
+  if(S.token){
+    var ct={},cl={};
+    S.stInfo.forEach(function(e){
+      if(ST[e.n]===false)return;
+      cl[e.l]=(cl[e.l]||0)+1;
+      e.t.forEach(function(x){ct[x]=(ct[x]||0)+1});
+    });
+    Object.keys(ct).forEach(function(x){t[x]=(t[x]||0)+Math.min(ct[x]*.5,6)});
+    Object.keys(cl).forEach(function(x){l[x]=(l[x]||0)+Math.min(cl[x]*.5,6)});
+  }
+  return{t:t,l:l};
+}
+function score(r,P){
+  var s=Math.log10(r.k+1)*.4+r.jit;
+  r.tp.forEach(function(x){s+=(P.t[x]||0);if(S.tagsIn.indexOf(x)>-1)s+=2});
+  return s+1.5*(P.l[r.lang]||0);
+}
+function bestTag(r,P){var b=null,w=0;r.tp.forEach(function(x){if((P.t[x]||0)>w){w=P.t[x];b=x}});return b}
+function refresh(P){
+  P=P||profile();
+  feed.querySelectorAll(".card").forEach(function(el){
+    var n=el.dataset.n,r=get(n),own=S.liked.indexOf(n)>-1||S.saved.indexOf(n)>-1;
+    el.querySelector(".like").classList.toggle("on",S.liked.indexOf(n)>-1);
+    el.querySelector(".save").classList.toggle("on",S.saved.indexOf(n)>-1);
+    el.querySelector(".star").classList.toggle("on",ST[n]===true);
+    el.querySelectorAll(".tags b").forEach(function(c){var t=c.dataset.t;c.className=S.tagsIn.indexOf(t)>-1?"in":S.tagsOut.indexOf(t)>-1?"out":""});
+    var t=bestTag(r,P);
+    el.querySelector(".why").innerHTML=own||tab==="search"?"":(t?"Recommended because you like <em>#"+esc(t)+"</em>":"Popular on GitHub");
+  });
+  document.getElementById("n").textContent=S.saved.length;
+}
+function card(r){
+  var o=r.full.split("/")[0],n=r.full.split("/")[1];
+  var el=document.createElement("section");
+  el.className="card";el.dataset.n=r.full;el.dataset.lang=r.lang;
+  el.style.setProperty("--c",col(r.lang));
+  el.innerHTML='<div class="info"><div class="who"><span class="av">'+esc(o[0].toUpperCase())+(r.av?'<img src="'+esc(r.av)+'&s=60" alt="" onerror="this.remove()">':"")+'</span><span>'+esc(o)+'</span></div><h2>'+esc(n)+'</h2><p class="desc">'+esc(r.desc)+'</p><div class="meta"><span><i class="dot"></i>'+esc(r.lang)+'</span><span>★ '+fmt(r.k)+'</span></div><div class="tags">'+r.tp.map(function(t){return'<b data-t="'+esc(t)+'">#'+esc(t)+"</b>"}).join("")+'</div><div class="why"></div></div><div class="rail"><button class="b like" aria-label="Like">'+HEART+'</button><button class="b save" aria-label="Save">'+MARK+'</button><button class="b star" aria-label="Star on GitHub">'+STAR+'</button><a class="b" href="https://github.com/'+esc(r.full)+'" target="_blank" rel="noopener" aria-label="Open on GitHub">↗</a></div><div class="pop">♥</div>';
+  el.querySelector(".like").onclick=function(){toggle(r,"liked")};
+  el.querySelector(".save").onclick=function(){toggle(r,"saved")};
+  el.querySelector(".star").onclick=function(){toggleStar(r)};
+  el.querySelector(".tags").onclick=function(e){var t=e.target.dataset&&e.target.dataset.t;if(t)showBanner(t,"pick")};
+  el.ondblclick=function(){if(S.liked.indexOf(r.full)<0)toggle(r,"liked");var p=el.querySelector(".pop");p.classList.remove("go");void p.offsetWidth;p.classList.add("go")};
+  return el;
+}
+function toggle(r,k){
+  var a=S[k],ix=a.indexOf(r.full);
+  if(ix>-1)a.splice(ix,1);else{a.push(r.full);if(k==="liked")S.seen[r.full]=r.pu||iso(Date.now())}
+  if(S.liked.indexOf(r.full)>-1||S.saved.indexOf(r.full)>-1)S.data[r.full]=r;else delete S.data[r.full];
+  persist();
+  var P=profile();
+  if(tab==="for"){
+    var end=document.getElementById("end");
+    var nodes=[].slice.call(feed.querySelectorAll(".card"));
+    var c=nodes.findIndex(function(x){return x.dataset.n===cur});
+    nodes.slice(c+1).sort(function(a,b){return score(get(b.dataset.n),P)-score(get(a.dataset.n),P)}).forEach(function(x){feed.insertBefore(x,end)});
+  }
+  refresh(P);
+  if(ix<0)maybeSuggest(r,P);
+}
+function setEnd(html,fn){
+  var e=document.getElementById("end");if(!e)return;
+  e.innerHTML="<div>"+html+"</div>";
+  if(fn)fn(e);
+}
+function pickQuery(){
+  var P=profile();
+  var tt=Object.keys(P.t).sort(function(a,b){return P.t[b]-P.t[a]}).slice(0,3);
+  var ll=Object.keys(P.l).filter(function(x){return x!=="Other"}).sort(function(a,b){return P.l[b]-P.l[a]}).slice(0,2);
+  var rnd=function(n){return 1+Math.floor(Math.random()*n)};
+  var useIn=S.tagsIn.length&&Math.random()<.5;
+  if(useIn)tt=S.tagsIn;
+  if(tt.length&&(useIn||Math.random()<.7)){
+    var q="topic:"+tt[Math.floor(Math.random()*tt.length)]+" stars:>"+(useIn?20:300);
+    if(ll.length&&Math.random()<.5)q+=' language:"'+ll[0]+'"';
+    return{q:q,page:rnd(3)};
+  }
+  var opts=[
+    {q:"created:>"+ago(14)+" stars:>100",page:rnd(2)},
+    {q:"stars:>3000 pushed:>"+ago(30),page:rnd(5)},
+    {q:"stars:>500 pushed:>"+ago(7),page:rnd(5)}
+  ];
+  return opts[Math.floor(Math.random()*opts.length)];
+}
+function fetchMore(){
+  if(loading||failed||tab==="sav"||(tab==="search"&&(sdone||!sq)))return;
+  loading=true;var my=rid;
+  if(tab==="for"&&S.token)loadStarSet();
+  var url;
+  var PP=tab==="search"?30:50;
+  if(tab==="search")url="https://api.github.com/search/repositories?q="+encodeURIComponent(searchQ(sq))+"&per_page="+PP+"&page="+spage;
+  else{var pq=pickQuery();url="https://api.github.com/search/repositories?q="+encodeURIComponent(pq.q)+"&sort=stars&order=desc&per_page="+PP+"&page="+pq.page}
+  var h={Accept:"application/vnd.github+json"};
+  if(S.token)h.Authorization="Bearer "+S.token;
+  searchGet(url).then(function(res){
+    if(!res.ok){var e=new Error("http");e.status=res.status;throw e}
+    return res.json();
+  }).then(function(j){return starWait().then(function(){return j})}).then(function(j){
+    if(my!==rid)return;
+    var P=profile(),end=document.getElementById("end");
+    var fresh=(j.items||[]).map(norm).filter(function(r){return !seen[r.full]&&(tab==="search"||(!blocked(r)&&!seenIt(r)))});
+    fresh.forEach(function(r){seen[r.full]=1;R[r.full]=r});
+    if(tab==="for")fresh.sort(function(a,b){return score(b,P)-score(a,P)});
+    fresh.forEach(function(r){var c=card(r);feed.insertBefore(c,end);io.observe(c)});
+    refresh(P);
+    loading=false;
+    if(tab==="search"){spage++;if((j.items||[]).length<PP||spage>50){sdone=true;setEnd(feed.querySelector(".card")?"<h3>That’s all the matches</h3>":"<h3>No repos found</h3>Try different keywords.");return}}
+    if(fresh.length)empties=0;else if(empties++<3)fetchMore();else setEnd("<h3>Nothing new right now</h3>Your not-interested tags may be filtering a lot. Try again in a bit.");
+  }).catch(function(err){
+    if(my!==rid)return;
+    loading=false;failed=true;
+    if(err.status===401){S.token="";S.user=null;ST={};persist()}
+    var limited=err.status===403||err.status===429;
+    setEnd("<h3>"+(limited?"GitHub rate limit reached":"Couldn’t reach GitHub")+"</h3>"+(limited?"Unauthenticated search is limited to about 10 requests a minute. Wait a bit, or sign in with GitHub to raise it to about 30.":(err.status===401?"Your token was rejected, so you’ve been signed out.":err.name==="AbortError"?"GitHub took too long to answer. Try again.":"Check your connection and try again."))+"<br><button id='retry'>Retry</button> "+(limited?"<button id='tok'>Sign in</button>":""),function(e){
+      e.querySelector("#retry").onclick=function(){failed=false;empties=0;setEnd("<h3>Loading fresh repos…</h3>");fetchMore()};
+      var t=e.querySelector("#tok");
+      if(t)t.onclick=function(){openSheet("Signing in raises your search limit and lets you star repos.",function(){failed=false;empties=0;setEnd("<h3>Loading fresh repos…</h3>");fetchMore()})};
+    });
+  });
+}
+var io=new IntersectionObserver(function(es){
+  es.forEach(function(e){
+    if(!e.isIntersecting)return;
+    document.getElementById("hint").style.opacity=0;
+    if(e.target.id==="end"){fetchMore();return}
+    cur=e.target.dataset.n;checkStar(cur);
+    if(tab==="for"){
+      var cs=feed.querySelectorAll(".card"),ix=[].indexOf.call(cs,e.target);
+      if(ix>=cs.length-8)fetchMore();
+    }
+  });
+},{root:feed,threshold:.6});
+var STAR='<svg viewBox="0 0 24 24"><path d="M12 3l2.8 5.7 6.2.9-4.5 4.4 1.1 6.2L12 17.3 6.4 20.2l1.1-6.2L3 9.6l6.2-.9z"/></svg>';
+var ST={},sheetDone=null,tmr;
+function toast(m){var t=document.getElementById("toast");t.textContent=m;t.classList.add("on");clearTimeout(tmr);tmr=setTimeout(function(){t.classList.remove("on")},2600)}
+function gh(method,path,tok,body){
+  var h={Accept:"application/vnd.github+json"};
+  if(tok||S.token)h.Authorization="Bearer "+(tok||S.token);
+  var o={method:method,headers:h};
+  if(body){h["Content-Type"]="application/json";o.body=JSON.stringify(body)}
+  var ac=typeof AbortController!=="undefined"?new AbortController():null,to=ac?setTimeout(function(){ac.abort()},15000):0;
+  if(ac)o.signal=ac.signal;
+  return fetch("https://api.github.com"+path,o).then(function(r){clearTimeout(to);return r},function(e){clearTimeout(to);throw e});
+}
+function checkStar(n){
+  if(!S.token||!n||ST[n]!==undefined)return;
+  ST[n]=null;
+  gh("GET","/user/starred/"+n).then(function(res){
+    if(res.status===204)ST[n]=true;
+    else if(res.status===404)ST[n]=false;
+    else{delete ST[n];if(res.status===401)signOut(true)}
+    refresh();
+  }).catch(function(){delete ST[n]});
+}
+function toggleStar(r){
+  if(!S.token){openSheet("Sign in to star repos on GitHub.");return}
+  var n=r.full,was=ST[n]===true;
+  ST[n]=!was;starInfo(r,!was);refresh();rerank();
+  var undo=function(m){ST[n]=was;starInfo(r,was);refresh();rerank();toast(m)};
+  gh(was?"DELETE":"PUT","/user/starred/"+n).then(function(res){
+    if(res.status===401){signOut(true)}
+    else if(res.ok)toast(was?"Removed your star":"Starred "+n.split("/")[1]+" on GitHub");
+    else undo("GitHub refused. Check the token’s permissions.");
+  }).catch(function(){undo("Couldn’t reach GitHub")});
+}
+function signOut(expired){
+  S.token="";S.user=null;S.gist="";ST={};STL=[];stPage=0;stDone=false;stErr="";S.stInfo=[];resetStars();persist();refresh();
+  if(tab==="sav"&&prof.style.display==="block")renderProf();
+  toast(expired?"Token rejected, you’ve been signed out":"Signed out");
+}
+function openSheet(msg,done){
+  sheetDone=done||null;
+  var sh=document.getElementById("sheet");
+  sh.innerHTML='<div class="sc"><h3>Sign in with GitHub</h3><p>'+esc(msg||"Sign in to star repos from here and get a higher search rate limit.")+'</p><p>GitHub doesn’t let a browser-only app run its normal login, so this uses a personal access token. It stays in this browser and is only sent to api.github.com. Starring needs the <b>public_repo</b> scope (classic token) or <b>Starring: read and write</b> (fine-grained token). Sync needs <b>gist</b> (classic) or <b>Gists: read and write</b> (fine-grained).</p><a class="lnk" href="https://github.com/settings/tokens/new?scopes=public_repo,gist&amp;description=GitScroll" target="_blank" rel="noopener">Create a token on GitHub ↗</a><input id="tk" type="password" placeholder="Paste your token" autocomplete="off"><div id="terr"></div><div class="row"><button id="tc">Cancel</button><button id="ts" class="pri">Sign in</button></div></div>';
+  sh.classList.add("open");
+  sh.onclick=function(e){if(e.target===sh)closeSheet()};
+  document.getElementById("tc").onclick=closeSheet;
+  document.getElementById("ts").onclick=doSignIn;
+  document.getElementById("tk").onkeydown=function(e){if(e.key==="Enter")doSignIn()};
+}
+function closeSheet(){document.getElementById("sheet").classList.remove("open")}
+function doSignIn(){
+  var v=document.getElementById("tk").value.trim(),er=document.getElementById("terr");
+  if(!v){er.textContent="Paste a token first.";return}
+  er.textContent="Checking…";
+  gh("GET","/user",v).then(function(res){
+    if(!res.ok)throw new Error("HTTP "+res.status);
+    return res.json();
+  }).then(function(j){
+    if(S.user&&S.user.login!==j.login){S.gist="";STL=[];stPage=0;stDone=false;stErr=""}S.token=v;S.user={login:j.login,avatar:j.avatar_url};ST={};persist();closeSheet();
+    toast("Signed in as @"+j.login);
+    refresh();
+    if(tab==="sav"&&prof.style.display==="block")renderProf();
+    checkStar(cur);
+    resetStars();loadStarSet();
+    if(S.sync)syncNow(true);
+    if(sheetDone){var f=sheetDone;sheetDone=null;f()}
+  }).catch(function(e){document.getElementById("terr").textContent="That token didn’t work ("+e.message+")."});
+}
+function normTag(s){return String(s||"").toLowerCase().replace(/^#+/,"").trim().replace(/[\s_]+/g,"-").replace(/[^a-z0-9-]/g,"").slice(0,50)}
+function blocked(r){return(r.all||r.tp).some(function(t){return S.tagsOut.indexOf(t)>-1})}
+function addTag(list,t){
+  t=normTag(t);if(!t)return false;
+  var a=list==="in"?S.tagsIn:S.tagsOut,b=list==="in"?S.tagsOut:S.tagsIn,i=b.indexOf(t);
+  if(i>-1)b.splice(i,1);
+  if(a.indexOf(t)<0)a.unshift(t);
+  persist();refresh();
+  if(list==="out")pruneBlocked();
+  return true;
+}
+function rmTag(list,t){var a=list==="in"?S.tagsIn:S.tagsOut,i=a.indexOf(t);if(i>-1)a.splice(i,1);persist();refresh()}
+function pruneBlocked(){
+  if(tab!=="for")return;
+  var nodes=[].slice.call(feed.querySelectorAll(".card")),c=nodes.findIndex(function(x){return x.dataset.n===cur});
+  nodes.slice(c+1).forEach(function(x){var r=get(x.dataset.n);if(r&&(blocked(r)||seenIt(r))){io.unobserve(x);x.remove()}});
+}
+function untracked(t){return S.tagsIn.indexOf(t)<0&&S.tagsOut.indexOf(t)<0&&S.dismissed.indexOf(t)<0}
+function sugList(){
+  var P=profile();
+  return Object.keys(P.t).filter(function(t){return P.t[t]>=3&&untracked(t)}).sort(function(a,b){return P.t[b]-P.t[a]}).slice(0,6);
+}
+function maybeSuggest(r,P){
+  var c=r.tp.filter(function(t){return P.t[t]>=3&&untracked(t)&&S.asked.indexOf(t)<0}).sort(function(a,b){return P.t[b]-P.t[a]})[0];
+  if(!c)return;
+  S.asked.push(c);persist();showBanner(c,"sug");
+}
+var btm;
+function showBanner(t,mode){
+  var b=document.getElementById("sug");
+  b.innerHTML=mode==="sug"?'<span>You keep coming back to <em>#'+esc(t)+'</em>. Add it to your interests?</span><button data-a="y">Add</button><button data-a="n">No thanks</button>':'<span><em>#'+esc(t)+'</em></span><button data-a="y">Interested</button><button data-a="n">Not interested</button>';
+  b.dataset.t=t;b.dataset.m=mode;b.classList.add("on");
+  clearTimeout(btm);btm=setTimeout(function(){b.classList.remove("on")},9000);
+}
+document.getElementById("sug").onclick=function(e){
+  var a=e.target.dataset&&e.target.dataset.a;if(!a)return;
+  var t=this.dataset.t,m=this.dataset.m;this.classList.remove("on");
+  if(m==="sug"){
+    if(a==="y"){addTag("in",t);toast("Added #"+t+" to your interests")}
+    else{S.dismissed.push(t);persist()}
+  }else{
+    addTag(a==="y"?"in":"out",t);
+    toast(a==="y"?"You’ll see more of #"+t:"Hiding #"+t+" from For You");
+  }
+};
+function chips(list,k,cls){
+  return list.length?list.map(function(t){return'<span class="chip '+cls+'">#'+esc(t)+'<button data-a="rm-'+k+'" data-t="'+esc(t)+'" aria-label="Remove">×</button></span>'}).join(""):'<span class="none">Nothing yet</span>';
+}
+function tagsPanel(){
+  var sg=sugList(),h='<div class="tp">';
+  if(sg.length)h+='<h4>Suggested for you</h4><p>You’ve been liking, saving and starring these a lot. Add them to your interests?</p><div class="chips">'+sg.map(function(t){return'<span class="chip sg">#'+esc(t)+'<button data-a="acc" data-t="'+esc(t)+'">+ Add</button><button data-a="dis" data-t="'+esc(t)+'" aria-label="Dismiss">×</button></span>'}).join("")+'</div>';
+  h+='<h4>Interested in</h4><div class="chips">'+chips(S.tagsIn,"in","in")+'</div><div class="add"><input data-k="in" placeholder="Add a hashtag, e.g. rust" autocapitalize="none" autocomplete="off"><button data-a="add-in">Add</button></div>';
+  h+='<h4>Not interested in</h4><div class="chips">'+chips(S.tagsOut,"out","out")+'</div><div class="add"><input data-k="out" placeholder="Hide a hashtag, e.g. crypto" autocapitalize="none" autocomplete="off"><button data-a="add-out">Add</button></div>';
+  return h+'<p class="hn">Interested tags show up more in For You. Not-interested tags are filtered out of For You, but not out of search. You can also tap any #tag on a card.</p></div>';
+}
+function tagAction(a,t){
+  psc=prof.scrollTop;
+  if(a==="rm-in")rmTag("in",t);
+  else if(a==="rm-out")rmTag("out",t);
+  else if(a==="acc")addTag("in",t);
+  else if(a==="dis"){S.dismissed.push(t);persist()}
+  else if(a==="add-in"||a==="add-out"){
+    var k=a.slice(4),i=prof.querySelector('input[data-k="'+k+'"]');
+    if(!i||!addTag(k,i.value))return;
+  }
+  renderProf();
+}
+var LISTS={l:"liked",s:"saved",i:"tagsIn",o:"tagsOut",d:"dismissed",a:"asked"};
+var FN="gitscroll-sync.json",syncing=false,syncAgain=false,spt,stMsg="";
+function reconcile(){
+  var now=Date.now(),n=0,cur={};
+  Object.keys(LISTS).forEach(function(k){S[LISTS[k]].forEach(function(x){cur[k+":"+x]=1})});
+  Object.keys(cur).forEach(function(key){var e=S.ts[key];if(!e||!e.v)S.ts[key]={v:1,t:now+(n++)}});
+  Object.keys(S.ts).forEach(function(key){if(S.ts[key].v&&!cur[key])S.ts[key]={v:0,t:now}});
+}
+function rebuild(){
+  Object.keys(S.ts).forEach(function(key){
+    if(key.slice(0,2)!=="i:")return;
+    var e=S.ts[key],ok="o:"+key.slice(2),o=S.ts[ok];
+    if(e.v&&o&&o.v){if(e.t>=o.t)S.ts[ok]={v:0,t:o.t};else S.ts[key]={v:0,t:e.t}}
+  });
+  Object.keys(LISTS).forEach(function(k){
+    var arr=Object.keys(S.ts).filter(function(key){return key.charAt(0)===k&&key.charAt(1)===":"&&S.ts[key].v}).sort(function(a,b){return S.ts[a].t-S.ts[b].t}).map(function(key){return key.slice(2)});
+    if(k==="i"||k==="o")arr.reverse();
+    S[LISTS[k]]=arr;
+  });
+}
+function mergeRemote(rts){
+  Object.keys(rts).forEach(function(k){var a=S.ts[k],b=rts[k];if(b&&typeof b.t==="number"&&(!a||b.t>a.t))S.ts[k]={v:b.v?1:0,t:b.t}});
+  rebuild();
+}
+function differs(a,b){
+  var k=Object.keys(a);
+  if(k.length!==Object.keys(b).length)return true;
+  return k.some(function(x){return !b[x]||b[x].t!==a[x].t||b[x].v!==a[x].v});
+}
+function cleanData(){Object.keys(S.data).forEach(function(n){if(S.liked.indexOf(n)<0&&S.saved.indexOf(n)<0)delete S.data[n]})}
+function httpErr(st){var e=new Error("HTTP "+st);e.status=st;return e}
+function readFile(g){
+  var f=g.files&&g.files[FN];
+  if(!f)return null;
+  try{return JSON.parse(f.content)}catch(e){throw new Error("corrupt")}
+}
+function getGist(id){
+  return gh("GET","/gists/"+id+"?_="+Date.now()).then(function(res){
+    if(res.status===404&&S.gist===id){S.gist="";return findGist(1)}
+    if(!res.ok)throw httpErr(res.status);
+    return res.json().then(readFile);
+  });
+}
+function findGist(page){
+  return gh("GET","/gists?per_page=100&page="+page+"&_="+Date.now()).then(function(res){
+    if(!res.ok)throw httpErr(res.status);
+    return res.json();
+  }).then(function(list){
+    var g=list.filter(function(x){return x.files&&x.files[FN]})[0];
+    if(g){S.gist=g.id;return getGist(g.id)}
+    if(list.length===100&&page<5)return findGist(page+1);
+    return null;
+  });
+}
+function pull(){return S.gist?getGist(S.gist):findGist(1)}
+function push(){
+  var body={files:{}};
+  body.files[FN]={content:JSON.stringify({v:1,ts:S.ts})};
+  if(S.gist)return gh("PATCH","/gists/"+S.gist,null,body).then(function(res){if(!res.ok)throw httpErr(res.status)});
+  body.description="GitScroll sync data (safe to ignore)";body.public=false;
+  return gh("POST","/gists",null,body).then(function(res){if(!res.ok)throw httpErr(res.status);return res.json()}).then(function(g){S.gist=g.id;persist(true)});
+}
+function hydrate(){
+  var miss=S.liked.concat(S.saved).filter(function(n,i,a){return a.indexOf(n)===i&&!get(n)});
+  if(!miss.length)return Promise.resolve();
+  var i=0;
+  function worker(){
+    if(i>=miss.length)return Promise.resolve();
+    var n=miss[i++];
+    return gh("GET","/repos/"+n).then(function(res){
+      if(res.status===404){S.data[n]={full:n,desc:"This repo is no longer available.",lang:"Other",k:0,tp:[],all:[],jit:0};return}
+      if(!res.ok)return;
+      return res.json().then(function(j){var r=norm(j);r.full=n;S.data[n]=r});
+    }).catch(function(){}).then(worker);
+  }
+  return Promise.all([worker(),worker(),worker(),worker()]);
+}
+function redraw(){refresh();if(tab==="sav"&&prof.style.display==="block"){psc=prof.scrollTop;renderProf()}}
+function setSt(m){stMsg=m;var e=document.getElementById("sst");if(e)e.textContent=m}
+function syncStatus(){
+  if(!S.token)return"Sign in to resume sync";
+  return stMsg||(S.last?"Synced at "+new Date(S.last).toLocaleTimeString([],{hour:"numeric",minute:"2-digit"}):"Not synced yet");
+}
+function syncRow(){
+  var h='<div class="pbtn row">'+(S.sync?'<button id="sync-now">Sync now</button><button id="sync-off">Turn off sync</button>':'<button id="sync-on">Turn on sync across devices</button>')+'</div>';
+  if(S.sync)h+='<div class="sst" id="sst">'+esc(syncStatus())+'</div>';
+  return h;
+}
+function schedPush(){clearTimeout(spt);spt=setTimeout(function(){syncNow()},2500)}
+function syncNow(manual){
+  if(!S.sync||!S.token)return;
+  if(syncing){syncAgain=true;return}
+  syncing=true;setSt("Syncing…");
+  var remote=null;
+  pull().then(function(r){
+    remote=r&&r.ts?r.ts:null;
+    reconcile();
+    if(remote)mergeRemote(remote);
+    var cutoff=Date.now()-90*864e5;
+    Object.keys(S.ts).forEach(function(k){if(!S.ts[k].v&&S.ts[k].t<cutoff)delete S.ts[k]});
+    cleanData();persist(true);redraw();
+    return(!remote||differs(S.ts,remote)?push():Promise.resolve()).then(hydrate);
+  }).then(function(){
+    S.last=Date.now();cleanData();persist(true);
+    stMsg="";setSt(syncStatus());redraw();
+    if(manual)toast("Synced");
+  }).catch(function(e){
+    if(e.status===401)signOut(true);
+    setSt(e.status===401?"Token rejected, sign in again.":(e.status===403||e.status===404)?"Sync needs a token with Gists access. Sign out, then sign in with a token that has the gist scope.":e.message==="corrupt"?"The sync file in your Gist couldn’t be read.":"Couldn’t sync right now. Will retry.");
+  }).then(function(){
+    syncing=false;
+    if(syncAgain){syncAgain=false;syncNow()}
+  });
+}
+function enableSync(){
+  if(!S.token){openSheet("Sync keeps your likes, saves and tags in a private Gist on your GitHub account, so it needs a token with Gists access.",function(){enableSync()});return}
+  S.sync=true;persist(true);toast("Sync on");
+  psc=prof.scrollTop;renderProf();syncNow(true);
+}
+function disableSync(){
+  S.sync=false;persist(true);toast("Sync off. Your data stays here and in your Gist.");
+  psc=prof.scrollTop;renderProf();
+}
+function iso(t){return new Date(t).toISOString().replace(/\.\d+Z$/,"Z")}
+function whenAgo(t){
+  var sec=(Date.now()-new Date(t))/1000;
+  if(sec<90)return"just now";
+  var m=sec/60;if(m<60)return Math.round(m)+"m ago";
+  var h=m/60;if(h<48)return Math.round(h)+"h ago";
+  var d=h/24;if(d<60)return Math.round(d)+"d ago";
+  return Math.round(d/30)+"mo ago";
+}
+function plain(md,n){
+  var t=String(md||"").replace(/\r/g,"").replace(/```[\s\S]*?```/g,"").replace(/!?\[([^\]]*)\]\([^)]*\)/g,"$1").replace(/^[#>\s*-]+/gm,"").replace(/[*_`]/g,"").replace(/\s+/g," ").trim();
+  return t.length>n?t.slice(0,n).replace(/\s+\S*$/,"")+"…":t;
+}
+// ---- Starred tab
+var STL=[],stPage=0,stDone=false,stLoading=false,stErr="";
+function loadStarred(){
+  if(!S.token||stLoading||stDone)return;
+  stLoading=true;stErr="";stPage++;
+  gh("GET","/user/starred?per_page=100&page="+stPage+"&_="+Date.now()).then(function(res){
+    if(!res.ok)throw httpErr(res.status);
+    return res.json();
+  }).then(function(list){
+    list.forEach(function(x){
+      var r=norm(x);
+      if(R[r.full])r=R[r.full];else R[r.full]=r;
+      ST[r.full]=true;
+      if(!STL.some(function(y){return y.full===r.full}))STL.push(r);
+    });
+    if(list.length<100)stDone=true;
+    stLoading=false;redrawStarred();
+  }).catch(function(e){
+    stLoading=false;stPage--;
+    stErr=e.status===401?"Your token was rejected.":e.status===403?"GitHub refused (rate limit or permissions).":"Couldn’t load your stars.";
+    redrawStarred();
+  });
+}
+function redrawStarred(){if(tab==="sav"&&prof.style.display==="block"&&pt==="starred"){psc=prof.scrollTop;renderProf()}}
+function starredMsg(){
+  if(!S.token)return'<div class="pe"><strong>Your GitHub stars</strong>Sign in to see the repos you’ve starred.<br><button id="star-login">Sign in with GitHub</button></div>';
+  if(stErr)return'<div class="pe"><strong>'+esc(stErr)+'</strong><button id="st-retry">Try again</button></div>';
+  if(stDone)return'<div class="pe"><strong>No starred repos yet</strong>Tap the ☆ on any repo to star it on GitHub.</div>';
+  return'<div class="pe"><strong>Loading your stars…</strong></div>';
+}
+// ---- Stories: updates from repos you liked
+var updBusy=false,updMsg="",sq=[],si=0,stm=null,sTok=0,sRem=8000,sStart=0,sOn=false,shold=null,spaused=false,sskip=false,SINCE={},DET={};
+function base(n){return S.seen[n]||iso(Date.now()-7*864e5)}
+function isNew(n){var u=S.upd[n];return !!(u&&u.p&&u.p>base(n))}
+function storyList(){
+  return S.liked.slice().reverse().filter(function(n){return S.upd[n]&&S.upd[n].p}).sort(function(a,b){
+    var x=isNew(a),y=isNew(b);
+    if(x!==y)return x?-1:1;
+    return S.upd[b].p<S.upd[a].p?-1:1;
+  }).slice(0,30);
+}
+function renderStories(){
+  var el=document.getElementById("stories");if(!el)return;
+  if(!S.liked.length){el.innerHTML='<div class="sh">Updates from repos you like will show up here.</div>';return}
+  var list=storyList();
+  if(!list.length){el.innerHTML='<div class="sh">'+esc(updMsg||(updBusy?"Checking your liked repos for updates…":"No updates to show yet."))+'</div>';return}
+  var nw=list.filter(isNew).length;
+  el.innerHTML='<div class="sh">Updates from repos you liked'+(nw?" · "+nw+" new":"")+(updMsg?" · "+esc(updMsg):"")+'</div><div class="srow">'+list.map(function(n){
+    var r=get(n)||{},u=S.upd[n]||{},av=r.av||u.av;
+    return'<button class="st" data-s="'+esc(n)+'"><span class="ring '+(isNew(n)?"new":"")+'"><span class="in">'+esc(n[0].toUpperCase())+(av?'<img src="'+esc(av)+'&s=120" alt="" onerror="this.remove()">':"")+'</span></span><small>'+esc(n.split("/")[1])+'</small></button>';
+  }).join("")+'</div>';
+}
+function loadUpdates(){
+  if(updBusy){renderStories();return}
+  Object.keys(S.upd).forEach(function(n){if(S.liked.indexOf(n)<0){delete S.upd[n];delete S.seen[n]}});
+  var now=Date.now();
+  var todo=S.liked.slice(-40).reverse().filter(function(n){var u=S.upd[n];return !u||now-u.t>15*60*1000});
+  if(!todo.length){renderStories();return}
+  updBusy=true;updMsg="";renderStories();
+  var i=0,stop=false;
+  function worker(){
+    if(stop||i>=todo.length)return Promise.resolve();
+    var n=todo[i++];
+    return gh("GET","/repos/"+n).then(function(res){
+      if(res.status===403||res.status===429){stop=true;updMsg=S.token?"rate limit reached, try later":"rate limit reached, sign in to check more";return}
+      if(res.status===404){S.upd[n]={p:null,t:Date.now()};return}
+      if(!res.ok)return;
+      return res.json().then(function(j){S.upd[n]={p:j.pushed_at,t:Date.now(),av:j.owner&&j.owner.avatar_url}});
+    }).catch(function(){}).then(worker);
+  }
+  Promise.all([worker(),worker(),worker(),worker()]).then(function(){updBusy=false;persist(true);renderStories()});
+}
+function storyOpenFrom(n){var l=storyList();sq=l;si=Math.max(0,l.indexOf(n));document.getElementById("story").classList.add("open");showStory()}
+function storyClose(){clearTimeout(stm);sTok++;sOn=false;document.getElementById("story").classList.remove("open");renderStories()}
+function storyNav(d){si+=d;if(si<0)si=0;if(si>=sq.length){storyClose();return}showStory()}
+function storyPause(){if(!sOn)return;clearTimeout(stm);sRem-=Date.now()-sStart;var v=document.getElementById("sv");if(v)v.classList.add("paused")}
+function storyResume(){if(!sOn)return;var v=document.getElementById("sv");if(v)v.classList.remove("paused");sStart=Date.now();clearTimeout(stm);stm=setTimeout(function(){storyNav(1)},Math.max(300,sRem))}
+function cdate(c){return c&&c.commit&&((c.commit.committer&&c.commit.committer.date)||(c.commit.author&&c.commit.author.date))}
+function fetchDetails(n){
+  var d=DET[n];if(d&&Date.now()-d.t<600000)return Promise.resolve(d);
+  return Promise.all([
+    gh("GET","/repos/"+n+"/releases/latest").then(function(res){return res.ok?res.json():null}).catch(function(){return null}),
+    gh("GET","/repos/"+n+"/commits?per_page=4").then(function(res){return res.ok?res.json():[]}).catch(function(){return[]})
+  ]).then(function(a){var x={t:Date.now(),rel:a[0],com:Array.isArray(a[1])?a[1]:[]};DET[n]=x;return x});
+}
+function slideHtml(n,r,d,since){
+  var h='<h2>'+esc(n.split("/")[1])+'</h2><p class="mut">'+esc(r.desc||"")+'</p>',rl=d.rel;
+  var newRel=rl&&rl.published_at&&rl.published_at>since;
+  if(newRel){
+    h+='<span class="pill">New release</span><h3>'+esc(rl.name||rl.tag_name)+(rl.name&&rl.name!==rl.tag_name?" · "+esc(rl.tag_name):"")+'</h3>';
+    var b=plain(rl.body,240);if(b)h+='<p>'+esc(b)+'</p>';
+    h+='<a class="lnk2" href="'+esc(rl.html_url)+'" target="_blank" rel="noopener">View release ↗</a>';
+  }
+  var nw=d.com.filter(function(c){var t=cdate(c);return t&&t>since});
+  var show=(nw.length?nw:d.com).slice(0,3);
+  if(show.length){
+    h+='<h3>'+(nw.length?(nw.length>=4?"4+ new commits":nw.length+" new commit"+(nw.length>1?"s":"")):"Latest commits · nothing new since you last looked")+'</h3><ul>'+show.map(function(c){
+      var m=String(c.commit.message||"").split("\n")[0];
+      return'<li>'+esc(m.length>110?m.slice(0,108)+"…":m)+'<small>'+esc((c.commit.author&&c.commit.author.name)||"")+' · '+whenAgo(cdate(c))+'</small></li>';
+    }).join("")+'</ul>';
+  }
+  if(rl&&!newRel)h+='<p class="mut">Latest release: '+esc(rl.tag_name)+' · '+whenAgo(rl.published_at)+'</p>';
+  return h+'<a class="lnk2" href="https://github.com/'+esc(n)+'" target="_blank" rel="noopener">Open on GitHub ↗</a>';
+}
+function showStory(){
+  clearTimeout(stm);sOn=false;spaused=false;
+  var tok=++sTok,n=sq[si];
+  var r=get(n)||{lang:"Other",tp:[],desc:""},u=S.upd[n]||{},o=n.split("/")[0],av=r.av||u.av;
+  if(SINCE[n]===undefined)SINCE[n]=base(n);
+  var since=SINCE[n];
+  if(u.p){S.seen[n]=u.p;persist(true)}
+  var el=document.getElementById("story");
+  el.innerHTML='<div class="sv" id="sv" style="--c:'+col(r.lang)+'"><div class="sbar"><b id="sfill"></b></div><div class="shd"><span class="av">'+esc(o[0].toUpperCase())+(av?'<img src="'+esc(av)+'&s=80" alt="" onerror="this.remove()">':"")+'</span><strong>'+esc(o)+'</strong><span class="wh">'+(u.p?"· updated "+whenAgo(u.p):"")+'</span><span class="cnt">'+(si+1)+' / '+sq.length+'</span><button class="sx" id="sclose" aria-label="Close">×</button></div><div class="sbody" id="sbody"><h2>'+esc(n.split("/")[1])+'</h2><p class="mut">Loading updates…</p></div><div class="szl" data-d="-1"></div><div class="szr" data-d="1"></div></div>';
+  document.getElementById("sclose").onclick=storyClose;
+  function go(html){
+    if(tok!==sTok)return;
+    document.getElementById("sbody").innerHTML=html;
+    sRem=8000;sOn=true;sStart=Date.now();
+    document.getElementById("sfill").classList.add("go");
+    stm=setTimeout(function(){storyNav(1)},sRem);
+  }
+  fetchDetails(n).then(function(d){go(slideHtml(n,r,d,since))}).catch(function(){go('<h2>'+esc(n.split("/")[1])+'</h2><p class="mut">Couldn’t load the latest activity.</p><a class="lnk2" href="https://github.com/'+esc(n)+'" target="_blank" rel="noopener">Open on GitHub ↗</a>')});
+}
+var stEl=document.getElementById("story");
+stEl.onpointerdown=function(e){sskip=false;if(!(e.target.dataset&&e.target.dataset.d))return;clearTimeout(shold);shold=setTimeout(function(){spaused=true;storyPause()},220)};
+stEl.onpointerup=stEl.onpointercancel=function(){clearTimeout(shold);if(spaused){spaused=false;sskip=true;storyResume()}};
+stEl.onclick=function(e){var d=e.target.dataset&&e.target.dataset.d;if(!d)return;if(sskip){sskip=false;return}storyNav(+d)};
+var STSET={},starP=null,starDone=false;
+function resetStars(){STSET={};starP=null;starDone=false}
+function isStarred(n){return ST[n]===false?false:!!(STSET[n]||ST[n]===true)}
+function seenIt(r){return S.liked.indexOf(r.full)>-1||S.saved.indexOf(r.full)>-1||isStarred(r.full)}
+function loadStarSet(){
+  if(!S.token)return Promise.resolve();
+  if(starP)return starP;
+  var pg=0,acc=[];
+  function next(){
+    pg++;
+    return gh("GET","/user/starred?per_page=100&page="+pg+"&_="+Date.now()).then(function(res){
+      if(!res.ok)throw httpErr(res.status);
+      return res.json();
+    }).then(function(list){
+      list.forEach(function(x){STSET[x.full_name]=1;if(acc.length<200)acc.push({n:x.full_name,l:x.language||"Other",t:(x.topics||[]).slice(0,4)})});
+      if(list.length===100&&pg<10)return next();
+    });
+  }
+  starP=next().then(function(){S.stInfo=acc;persist(true);starDone=true;pruneBlocked();rerank()}).catch(function(){starDone=true});
+  return starP;
+}
+var SC={};
+function searchQ(q){return /(^|\s)in:/.test(q)?q:q+" in:name,description,topics"}
+function searchGet(url){
+  var hit=SC[url];
+  if(hit&&Date.now()-hit.t<600000)return Promise.resolve({ok:true,status:200,json:function(){return Promise.resolve(hit.j)}});
+  return gh("GET",url.slice(22)).then(function(res){
+    if(!res.ok)return res;
+    return res.json().then(function(j){
+      if(Object.keys(SC).length>60)SC={};
+      SC[url]={t:Date.now(),j:j};
+      return{ok:true,status:200,json:function(){return Promise.resolve(j)}};
+    });
+  });
+}
+function starWait(){return(tab==="for"&&S.token&&!starDone)?Promise.race([loadStarSet(),new Promise(function(r){setTimeout(r,1200)})]):Promise.resolve()}
+function starInfo(r,on){
+  S.stInfo=S.stInfo.filter(function(e){return e.n!==r.full});
+  if(on){S.stInfo.unshift({n:r.full,l:r.lang,t:(r.tp||[]).slice(0,4)});S.stInfo=S.stInfo.slice(0,200)}
+  persist(true);
+}
+function rerank(){
+  if(tab!=="for")return;
+  var P=profile(),end=document.getElementById("end"),nodes=[].slice.call(feed.querySelectorAll(".card"));
+  var c=nodes.findIndex(function(x){return x.dataset.n===cur});
+  nodes.slice(c+1).sort(function(a,b){return score(get(b.dataset.n),P)-score(get(a.dataset.n),P)}).forEach(function(x){feed.insertBefore(x,end)});
+}
+var prof=document.getElementById("prof"),pt="saved",psc=0,plist=[];
+function renderProf(){
+  var P=profile(),langs={};
+  S.saved.concat(S.liked).forEach(function(n){var r=get(n);if(r)langs[r.lang]=1});
+  var tags=S.tagsIn.concat(Object.keys(P.t).sort(function(a,b){return P.t[b]-P.t[a]})).filter(function(t,i,a){return a.indexOf(t)===i&&S.tagsOut.indexOf(t)<0}).slice(0,6);
+  plist=pt==="starred"?STL.filter(function(r){return ST[r.full]!==false}):(pt==="saved"?S.saved:S.liked).slice().reverse().map(get).filter(Boolean);
+  var h='<div class="pw"><div class="ph"><div class="pav"><span>'+(S.user?'<img src="'+esc(S.user.avatar)+'&s=160" alt="">':'&lt;/&gt;')+'</span></div><div class="pst"><div><b>'+S.saved.length+'</b>saved</div><div><b>'+S.liked.length+'</b>liked</div><div><b>'+Object.keys(langs).length+'</b>languages</div></div></div>';
+  h+='<div class="pbio"><strong>'+(S.user?"@"+esc(S.user.login):"Your GitHub finds")+'</strong>'+(tags.length?tags.map(function(t){return"<span>#"+esc(t)+"</span>"}).join(""):"Like and save repos to build your profile.")+'</div>';
+  h+='<div class="pbtn"><button id="auth">'+(S.user?"Sign out":"Sign in with GitHub")+'</button></div>';
+  h+=syncRow();h+='<div id="stories"></div>';
+  h+='<div class="pt"><button data-k="saved" class="'+(pt==="saved"?"on":"")+'">'+MARK+'Saved</button><button data-k="liked" class="'+(pt==="liked"?"on":"")+'">'+HEART+'Liked</button><button data-k="starred" class="'+(pt==="starred"?"on":"")+'">'+STAR+'Starred</button><button data-k="tags" class="'+(pt==="tags"?"on":"")+'"><b style="font-weight:800;margin-right:5px">#</b>Interests'+(sugList().length?'<span class="bdg">'+sugList().length+'</span>':"")+'</button></div>';
+  if(pt==="tags"){h+=tagsPanel()}else if(pt==="starred"&&!plist.length){h+=starredMsg()}else if(plist.length){
+    h+='<div class="grid">'+plist.map(function(r,i){
+      var bd=pt==="liked"?(S.saved.indexOf(r.full)>-1?MARK:""):(S.liked.indexOf(r.full)>-1?HEART:"");
+      return'<button class="tile" data-i="'+i+'" style="--c:'+col(r.lang)+'"><span class="tb">'+bd+'</span><b>'+esc(r.full.split("/")[1])+'</b><small>'+esc(r.full.split("/")[0])+' · ★ '+fmt(r.k)+'</small></button>';
+    }).join("")+'</div>';
+  }else{
+    h+='<div class="pe"><strong>'+(pt==="saved"?"No saved repos yet":"No liked repos yet")+'</strong>'+(pt==="saved"?"Tap the bookmark on any repo and it shows up here.":"Double-tap a repo or tap the heart and it shows up here.")+'</div>';
+  }
+  if(pt==="starred"&&S.token&&plist.length&&!stDone)h+='<div class="pe"><button id="st-more">Load more</button></div>';
+  prof.innerHTML=h+'</div>';
+  prof.scrollTop=psc;
+  if(pt==="starred"&&S.token&&!STL.length&&!stDone&&!stLoading&&!stErr)loadStarred();
+  loadUpdates();
+}
+prof.onclick=function(e){
+  if(e.target.id==="auth"){if(S.user)signOut();else openSheet();return}
+  var sid=e.target.id;
+  var sb=e.target.closest(".st");if(sb){storyOpenFrom(sb.dataset.s);return}
+  if(sid==="star-login"){openSheet("Sign in to see the repos you’ve starred.");return}
+  if(sid==="st-retry"){stErr="";loadStarred();return}
+  if(sid==="st-more"){loadStarred();return}
+  if(sid==="sync-on"){enableSync();return}
+  if(sid==="sync-now"){syncNow(true);return}
+  if(sid==="sync-off"){disableSync();return}
+  var ac=e.target.closest("[data-a]");if(ac){tagAction(ac.dataset.a,ac.dataset.t);return}
+  var t=e.target.closest(".tile");
+  if(t){psc=prof.scrollTop;openView(+t.dataset.i);return}
+  var b=e.target.closest(".pt button");
+  if(b){pt=b.dataset.k;psc=0;renderProf()}
+};
+prof.onkeydown=function(e){if(e.key==="Enter"&&e.target.tagName==="INPUT"&&e.target.dataset.k)tagAction("add-"+e.target.dataset.k)};
+function openView(i){
+  feed.innerHTML="";cur="";
+  plist.forEach(function(r){var c=card(r);feed.appendChild(c);io.observe(c)});
+  prof.style.display="none";feed.style.display="block";
+  document.getElementById("back").style.display="block";
+  refresh();
+  feed.scrollTop=feed.clientHeight*i;
+}
+document.getElementById("back").onclick=function(){show("sav")};
+function show(t,q){
+  tab=t;feed.innerHTML="";cur="";failed=false;empties=0;rid++;loading=false;
+  prof.style.display=t==="sav"?"block":"none";feed.style.display=t==="sav"?"none":"block";document.getElementById("back").style.display="none";
+  document.getElementById("t-for").classList.toggle("on",t==="for");
+  document.getElementById("t-sav").classList.toggle("on",t==="sav");
+  document.getElementById("t-q").classList.toggle("on",t==="search");
+  document.getElementById("sbar").style.display=t==="search"?"flex":"none";
+  var m=document.createElement("section");m.className="msg";m.id="end";
+  if(t==="sav"){renderProf();refresh();}else if(t==="for"){
+    m.innerHTML="<div><h3>Loading fresh repos…</h3></div>";
+    feed.appendChild(m);io.observe(m);
+    refresh();fetchMore();
+  }else{
+    sq=q||"";spage=1;sdone=false;seen={};
+    m.innerHTML=sq?"<div><h3>Searching…</h3></div>":"<div><h3>Search GitHub</h3>Try a topic, a language or a name, like <b>rust cli</b> or <b>language:go stars:&gt;1000</b>.</div>";
+    feed.appendChild(m);
+    if(sq){io.observe(m);fetchMore()}
+    refresh();
+  }
+}
+document.getElementById("t-for").onclick=function(){show("for")};
+document.getElementById("t-sav").onclick=function(){psc=0;show("sav")};
+document.getElementById("t-q").onclick=function(){if(tab!=="search")show("search","");document.getElementById("q").focus()};
+document.getElementById("q").onkeydown=function(e){if(e.key==="Enter"){var v=this.value.trim();if(v){this.blur();show("search",v)}}};
+show("for");
+if(S.sync&&S.token)syncNow();
+document.addEventListener("visibilitychange",function(){if(document.visibilityState==="visible"&&S.sync&&S.token&&Date.now()-(S.last||0)>30000)syncNow()});
+</script>
+</body>
+</html>

@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Yesterday’s Weather</title>
+<style>
+:root{--bg:#eef4fb;--card:#fff;--text:#14233a;--muted:#5b6b82;--line:#dbe5f1;--btn:#2563eb}
+@media (prefers-color-scheme:dark){:root{--bg:#0e1726;--card:#16233a;--text:#eaf1fb;--muted:#9fb0c8;--line:#25364f;--btn:#5b8def}}
+body{margin:0;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px;box-sizing:border-box}
+main{width:100%;max-width:420px;background:var(--card);border:1px solid var(--line);border-radius:24px;padding:32px 28px;text-align:center}
+.place{color:var(--muted);margin:0}
+h1{font-size:1.05rem;font-weight:600;margin:4px 0 16px}
+.icon{font-size:5rem;line-height:1.1}
+.cond{font-size:1.4rem;font-weight:600;margin:8px 0 4px}
+.temps{font-size:3rem;font-weight:700;margin:0}
+.temps span{color:var(--muted);font-weight:500}
+.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:24px}
+.grid div{border:1px solid var(--line);border-radius:14px;padding:12px 6px}
+.grid b{display:block;font-size:1.1rem}
+.grid small{color:var(--muted)}
+button{margin-top:22px;background:none;border:1px solid var(--line);color:var(--btn);border-radius:999px;padding:8px 16px;font:inherit;cursor:pointer}
+.note{color:var(--muted);font-size:.8rem;margin:16px 0 0}
+</style>
+</head>
+<body>
+<main>
+  <p class="place" id="place">Târgu Mureș, Romania</p>
+  <h1 id="date">Loading…</h1>
+  <div class="icon" id="icon">⏳</div>
+  <p class="cond" id="cond"></p>
+  <p class="temps" id="temps"></p>
+  <div class="grid">
+    <div><b id="rain">–</b><small>Rain</small></div>
+    <div><b id="wind">–</b><small>Max wind</small></div>
+    <div><b id="uv">–</b><small>UV index</small></div>
+  </div>
+  <button id="loc">Use my location</button>
+  <p class="note">Data: Open-Meteo.com</p>
+</main>
+<script>
+const CODES={0:["Clear","☀️"],1:["Mostly clear","🌤️"],2:["Partly cloudy","⛅"],3:["Overcast","☁️"],45:["Fog","🌫️"],48:["Fog","🌫️"],51:["Light drizzle","🌦️"],53:["Drizzle","🌦️"],55:["Heavy drizzle","🌧️"],61:["Light rain","🌦️"],63:["Rain","🌧️"],65:["Heavy rain","🌧️"],66:["Freezing rain","🌧️"],67:["Freezing rain","🌧️"],71:["Light snow","🌨️"],73:["Snow","🌨️"],75:["Heavy snow","❄️"],77:["Snow grains","❄️"],80:["Showers","🌦️"],81:["Showers","🌧️"],82:["Heavy showers","⛈️"],85:["Snow showers","🌨️"],86:["Snow showers","🌨️"],95:["Thunderstorm","⛈️"],96:["Thunderstorm, hail","⛈️"],99:["Thunderstorm, hail","⛈️"]};
+const $=id=>document.getElementById(id);
+async function load(lat,lon,name){
+  $("place").textContent=name;
+  try{
+    const u=`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_sum,wind_speed_10m_max,uv_index_max&past_days=1&forecast_days=1&timezone=auto`;
+    const d=(await (await fetch(u)).json()).daily;
+    const [text,emoji]=CODES[d.weather_code[0]]||["Unknown","🌡️"];
+    $("date").textContent=new Date(d.time[0]+"T12:00").toLocaleDateString(undefined,{weekday:"long",day:"numeric",month:"long",year:"numeric"});
+    $("icon").textContent=emoji;$("cond").textContent=text;
+    $("temps").innerHTML=`${Math.round(d.temperature_2m_max[0])}°<span> / ${Math.round(d.temperature_2m_min[0])}°C</span>`;
+    $("rain").textContent=d.precipitation_sum[0]+" mm";
+    $("wind").textContent=Math.round(d.wind_speed_10m_max[0])+" km/h";
+    $("uv").textContent=Math.round(d.uv_index_max[0]);
+  }catch(e){$("date").textContent="Couldn’t load weather";$("icon").textContent="⚠️";}
+}
+$("loc").onclick=()=>navigator.geolocation?.getCurrentPosition(p=>load(p.coords.latitude,p.coords.longitude,"Your location"));
+load(46.54,24.56,"Târgu Mureș, Romania");
+</script>
+</body>
+</html>

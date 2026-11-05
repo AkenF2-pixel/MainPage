@@ -1,0 +1,633 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Class planner</title>
+<link href="https://fonts.googleapis.com/css2?family=Schibsted+Grotesk:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root{box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);
+--bg:#eef2f7;--card:#fff;--ink:#16202f;--mute:#5d6b80;--line:#d9e0ea;--accent:#0f6b8f;--onacc:#fff;--bad:#c42b1c;--bs:70%;--bl:86%;--bt:22%;color-scheme:light}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#10161f;--card:#192230;--ink:#e8eef7;--mute:#97a6bb;--line:#2a3648;--accent:#5cc0e8;--onacc:#06222e;--bad:#ff8a7d;--bs:45%;--bl:26%;--bt:88%;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#10161f;--card:#192230;--ink:#e8eef7;--mute:#97a6bb;--line:#2a3648;--accent:#5cc0e8;--onacc:#06222e;--bad:#ff8a7d;--bs:45%;--bl:26%;--bt:88%;color-scheme:dark}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:400 15px/1.45 "Schibsted Grotesk",system-ui,-apple-system,"Segoe UI",sans-serif}
+main{max-width:1000px;margin:0 auto;padding:20px 14px 40px}
+h1{font-size:26px;margin:0 0 2px;letter-spacing:-.02em}
+.sub{color:var(--mute);margin:0 0 16px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:14px;margin-bottom:14px}
+h2{font-size:16px;margin:0 0 10px}
+.row{display:flex;flex-wrap:wrap;gap:10px}
+label{display:flex;flex-direction:column;gap:4px;font-size:13px;color:var(--mute);flex:1 1 140px}
+input,select,textarea{font:inherit;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:8px 9px;min-width:0}
+input:focus-visible,select:focus-visible,button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin:12px 0}
+.chip{font:inherit;border:1px solid var(--line);background:var(--bg);color:var(--ink);border-radius:999px;padding:6px 12px;cursor:pointer}
+.chip[aria-pressed="true"]{background:var(--accent);color:var(--onacc);border-color:var(--accent)}
+.sw{width:26px;height:26px;border-radius:50%;border:2px solid transparent;cursor:pointer;background:hsl(var(--h) 65% 50%);padding:0}
+.sw[aria-pressed="true"]{border-color:var(--ink)}
+.acts{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px;align-items:center}
+.btn{font:inherit;font-weight:500;border:1px solid var(--line);background:var(--card);color:var(--ink);border-radius:6px;padding:8px 14px;cursor:pointer}
+.btn.pri{background:var(--accent);color:var(--onacc);border-color:var(--accent)}
+.btn.del{color:var(--bad)}
+#msg{color:var(--bad);font-size:13px}
+.warn{border-left:4px solid var(--bad);padding:8px 12px;background:var(--card);border-radius:6px;margin-bottom:14px;color:var(--bad)}
+.scroll{overflow-x:auto}
+#grid{display:grid;min-width:560px}
+.gh{font-weight:700;text-align:center;padding:6px 0;border-bottom:1px solid var(--line)}
+.tl{font-size:11px;color:var(--mute);text-align:right;padding-right:6px;transform:translateY(-7px)}
+.col{position:relative;border-left:1px solid var(--line);background:repeating-linear-gradient(to bottom,transparent 0,transparent 47px,var(--line) 47px,var(--line) 48px)}
+.blk{position:absolute;overflow:hidden;text-align:left;font:inherit;font-size:12px;line-height:1.3;padding:4px 6px;border-radius:6px;border:1px solid hsl(var(--h) 50% 50%);cursor:pointer;background:hsl(var(--h) var(--bs) var(--bl));color:hsl(var(--h) 55% var(--bt))}
+.blk b{display:block;font-size:12.5px}.blk span{display:block;opacity:.85}
+.blk.clash{border:2px dashed var(--bad)}
+.blk.sel{outline:2px solid var(--ink)}
+.item{display:flex;justify-content:space-between;gap:10px;width:100%;text-align:left;font:inherit;color:var(--ink);background:none;border:0;border-top:1px solid var(--line);padding:9px 0;cursor:pointer}
+.item i{width:10px;height:10px;border-radius:50%;display:inline-block;margin-right:8px;background:hsl(var(--h) 65% 50%)}
+.item small{color:var(--mute)}
+.empty{color:var(--mute);margin:0}
+textarea{resize:vertical}
+.err{color:var(--bad);font-size:13px}.late{color:var(--bad)}
+.ir{display:flex;align-items:center;gap:8px;border-top:1px solid var(--line)}
+.ir .item{border-top:0;flex:1;width:auto;min-width:0}
+.ir.done .item{opacity:.55}.ir.done b{text-decoration:line-through}
+.ck{width:18px;height:18px;accent-color:var(--accent);flex:none}
+.now{position:absolute;left:0;right:0;height:0;border-top:2px solid #d6249f;z-index:5;pointer-events:none}
+.now::before{content:"";position:absolute;left:-5px;top:-6px;width:10px;height:10px;border-radius:50%;background:#d6249f}
+.now span{position:absolute;right:2px;top:-17px;font-size:10px;line-height:15px;background:#d6249f;color:#fff;border-radius:3px;padding:0 4px}
+.gh.today{color:var(--accent)}
+.blk.ex{border:2px solid var(--bad)}
+.mi.ex{border:2px solid var(--bad);padding:0 3px}
+.xt{display:block;width:100%;margin-top:3px;font:inherit;font-size:11px;font-weight:500;padding:1px 3px;border:2px solid var(--bad);border-radius:4px;background:var(--card);color:var(--ink);cursor:pointer;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+[hidden]{display:none!important}
+#mgrid{display:grid;grid-template-columns:38px repeat(7,minmax(0,1fr));min-width:640px}
+.mc{min-height:84px;min-width:0;border-left:1px solid var(--line);border-top:1px solid var(--line);padding:3px;display:flex;flex-direction:column;gap:2px}
+.mc.out{opacity:.45}
+.mc.today .dn{background:var(--accent);color:var(--onacc)}
+.dn{font:inherit;font-size:12px;border:0;background:none;color:var(--ink);align-self:flex-start;border-radius:999px;min-width:22px;height:22px;cursor:pointer}
+.mi{font:inherit;font-size:11px;text-align:left;border:0;border-radius:4px;padding:1px 4px;cursor:pointer;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;background:hsl(var(--h) var(--bs) var(--bl));color:hsl(var(--h) 55% var(--bt))}
+.mi.ev{background-image:repeating-linear-gradient(135deg,transparent 0 6px,hsl(var(--h) 50% 50%/.22) 6px 8px)}
+.wk{font-size:11px;color:var(--mute);border-top:1px solid var(--line);padding:6px 4px 0;text-align:right}.wk small{display:block}
+.nav{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:10px}
+.wlabel{flex:1;min-width:150px;text-align:center;line-height:1.3}.wlabel small{display:block;color:var(--mute)}
+.blk.ev{background-image:repeating-linear-gradient(135deg,transparent 0 6px,hsl(var(--h) 50% 50%/.22) 6px 8px)}
+</style>
+</head>
+<body>
+<main>
+  <h1>Class planner</h1>
+  <p class="sub">Add your classes and see the whole week at a glance. Changes are saved automatically.</p>
+  <p class="sub" id="sync" style="font-size:13px;margin:-10px 0 14px">Saved on this device only. Open Options to turn on sync across devices.</p>
+
+  <div class="chips" id="tabs" role="group" aria-label="Sections"><button class="chip" data-t="sch" aria-pressed="true">Schedule</button><button class="chip" data-t="ex" aria-pressed="false">Exams<span id="nx"></span></button><button class="chip" data-t="as" aria-pressed="false">Assignments<span id="nt"></span></button></div>
+  <div id="v-sch">
+  <section class="card">
+    <h2 id="ftitle">Add a class</h2>
+    <div class="chips" id="kind" role="group" aria-label="Type"></div>
+    <div class="row">
+      <label>Class name<input id="name" placeholder="Linear Algebra" maxlength="60"></label>
+      <label>Room or building<input id="loc" placeholder="Room B204" maxlength="40"></label>
+      <label>Starts<input id="start" type="time" value="09:00"></label>
+      <label>Ends<input id="end" type="time" value="10:30"></label>
+      <label>Type<select id="type"></select></label>
+      <label>Variation<select id="vari"></select></label>
+      <label id="dateWrap" hidden>Date<input id="date" type="date"></label>
+      <label id="wkWrap">Repeats<select id="wk"><option value="all">Every week</option><option value="odd">Odd weeks only</option><option value="even">Even weeks only</option><option value="3">Every 3 weeks</option><option value="4">Every 4 weeks</option></select></label>
+      <label id="wfWrap">From week<input id="wfrom" type="number" min="1" max="60" placeholder="1"></label>
+      <label id="wuWrap">Until week<input id="wuntil" type="number" min="1" max="60" placeholder="End"></label>
+    </div>
+    <div class="chips" id="days" role="group" aria-label="Days"></div>
+    <div class="chips" id="hues" role="group" aria-label="Colour"></div>
+    <div class="row" style="margin-top:12px">
+      <label>Teacher<input id="teacher" maxlength="60"></label>
+      <label>Course code<input id="code" maxlength="20"></label>
+    </div>
+    <label style="margin-top:10px">Details and notes<textarea id="notes" rows="2" maxlength="400"></textarea></label>
+    <div class="acts">
+      <button class="btn pri" id="save">Add class</button>
+      <button class="btn" id="cancel" hidden>Cancel</button>
+      <button class="btn del" id="del" hidden>Delete class</button>
+      <span id="msg" role="alert"></span>
+    </div>
+  </section>
+
+  <div id="warn" class="warn" hidden></div>
+
+  <section class="card">
+    <div class="nav">
+      <button class="chip" id="vwk" aria-pressed="true">Week</button>
+      <button class="chip" id="vmo" aria-pressed="false">Month</button>
+      <button class="btn" id="prev" aria-label="Previous">‹</button>
+      <div class="wlabel"><b id="wrange"></b><small id="wpar"></small></div>
+      <button class="btn" id="next" aria-label="Next week">›</button>
+      <button class="btn" id="today">Today</button>
+      <button class="btn" id="opts" aria-expanded="false">Options</button>
+    </div>
+    <div class="row" id="optp" hidden style="margin-bottom:12px">
+      <label>Semester starts<input id="sem" type="date"></label>
+      <label>Semester ends<input id="semend" type="date"></label>
+      <label>First week is<select id="fw"><option value="odd">Odd</option><option value="even">Even</option></select></label>
+      <p class="sub" style="flex:2 1 220px;align-self:end;margin:0">Week 1 is the week that contains this start date. Odd and even weeks follow from the choice you make for it. Weekly classes stop after the end date, and you can leave it empty for no end.</p>
+      <div id="typed" style="flex:1 1 100%"></div>
+      <div id="ghup" style="flex:1 1 100%">
+        <h2 style="margin-top:6px">Sync across devices</h2>
+        <p class="sub" style="margin:0 0 8px">Your timetable is kept in a private GitHub gist that belongs to you. Create a token that only has the gist permission (<a href="https://github.com/settings/tokens/new?scopes=gist&amp;description=Class%20planner" target="_blank" rel="noopener">make a token</a>), then paste it here on each device.</p>
+        <div class="row"><label style="flex:2 1 220px">GitHub token<input id="ghtok" type="password" autocomplete="off" placeholder="ghp_..."></label><button class="btn pri" id="ghgo" style="align-self:end">Connect</button><button class="btn" id="ghoff" style="align-self:end" hidden>Disconnect</button></div>
+        <p class="sub" id="ghm" style="margin:8px 0 0" role="status"></p>
+      </div>
+      <div id="gcup" style="flex:1 1 100%">
+        <h2 style="margin-top:6px">Google Classroom</h2>
+        <p class="sub" style="margin:0 0 8px">Import your Classroom assignments into the Assignments tab. Ones you have turned in are ticked off for you. You need a free Google client ID once. It only asks to read your courses and your own coursework.</p>
+        <div class="row"><label style="flex:2 1 220px">Google OAuth client ID<input id="gcid" autocomplete="off" placeholder="1234567890-abc.apps.googleusercontent.com"></label><button class="btn pri" id="gcgo" style="align-self:end">Import from Classroom</button></div>
+        <p class="sub" id="gcm" style="margin:8px 0 0" role="status"></p>
+        <details style="margin-top:8px"><summary>How to get a client ID</summary>
+          <ol class="sub" style="margin:8px 0 0;padding-left:20px">
+            <li>Open console.cloud.google.com and create a project.</li>
+            <li>Under APIs and services, then Library, enable the Google Classroom API.</li>
+            <li>Set up the OAuth consent screen. Choose External, add your own Google account as a test user, and add the scopes .../auth/classroom.courses.readonly and .../auth/classroom.coursework.me.readonly.</li>
+            <li>Under Credentials, create an OAuth client ID of type Web application. In Authorized JavaScript origins add the address of this page without the path, for example https://your-username.github.io</li>
+            <li>Copy the client ID and paste it above. Google will warn that the app is unverified. Press Advanced, then continue. School accounts may be blocked if your school limits third-party apps.</li>
+          </ol>
+        </details>
+      </div>
+      <div id="bkup" style="flex:1 1 100%">
+        <h2 style="margin-top:6px">Backup</h2>
+        <p class="sub" style="margin:0 0 8px">Save your whole timetable to a file, or load one from another device.</p>
+        <div class="acts" style="margin-top:0"><button class="btn" id="bkexp">Export backup</button><button class="btn" id="bkimp">Import backup</button><button class="btn" id="bkundo" hidden>Undo import</button><input id="bkfile" type="file" accept=".json,application/json" hidden></div>
+        <p class="sub" id="bkm" style="margin:8px 0 0" role="status"></p>
+        <details style="margin-top:8px"><summary>Copy or paste backup text instead</summary><textarea id="bk" rows="3" style="width:100%;margin-top:8px"></textarea><div class="acts"><button class="btn" id="bkshow">Show backup text</button><button class="btn" id="bkload">Import from text</button></div></details>
+      </div>
+    </div>
+    <div class="scroll"><div id="grid"></div><div id="mgrid" hidden></div></div>
+  </section>
+
+  <section class="card">
+    <h2 id="ltitle">Classes</h2>
+    <div id="list"></div>
+  </section>
+  </div>
+  <div id="v-ex" hidden></div>
+  <div id="v-as" hidden></div>
+</main>
+
+<script>
+var DAYS=["Mon","Tue","Wed","Thu","Fri","Sat","Sun"];
+var HUES=[205,150,32,340,270,175,5,50,90,225,300,190];
+var KEY="class-planner-v1";
+var cls=[],editing=null,hue=HUES[0],picked=[],kind="class",off=0,mo=0,view="week",secDraw=[];
+try{cls=JSON.parse(localStorage.getItem(KEY)||"[]")}catch(e){cls=[]}
+if(!Array.isArray(cls))cls=[];
+var XKEY="class-planner-exams-v1",TKEY="class-planner-tasks-v1",exams=[],tasks=[];
+try{exams=JSON.parse(localStorage.getItem(XKEY)||"[]");tasks=JSON.parse(localStorage.getItem(TKEY)||"[]")}catch(e){}
+if(!Array.isArray(exams))exams=[];if(!Array.isArray(tasks))tasks=[];
+var YKEY="class-planner-types-v1",types=null;
+try{types=JSON.parse(localStorage.getItem(YKEY))}catch(e){}
+if(!Array.isArray(types))types=[{name:"Lecture",vars:[]},{name:"Seminar",vars:[]},{name:"Lab",vars:[]}];
+var UKEY="class-planner-updated",upd=0,applying=false,gh={tok:"",id:""},ptimer=null,pushing=false,again=false;
+try{upd=+localStorage.getItem(UKEY)||0;gh.tok=localStorage.getItem("class-planner-gh-token")||"";gh.id=localStorage.getItem("class-planner-gist")||""}catch(e){}
+function setSync(t){var s=$("#sync");if(s)s.textContent=t}
+function push(){
+  if(applying)return;
+  upd=Date.now();try{localStorage.setItem(UKEY,String(upd))}catch(e){}
+  if(gh.tok&&gh.id){clearTimeout(ptimer);ptimer=setTimeout(syncPush,1500)}
+}
+function persist(){try{localStorage.setItem(KEY,JSON.stringify(cls));localStorage.setItem(XKEY,JSON.stringify(exams));localStorage.setItem(TKEY,JSON.stringify(tasks));localStorage.setItem(YKEY,JSON.stringify(types))}catch(e){}push()}
+var $=function(s){return document.querySelector(s)};
+var AKEY="class-planner-semester",anchor=null;
+try{anchor=localStorage.getItem(AKEY)}catch(e){}
+function pd(s){var p=s.split("-");return new Date(+p[0],+p[1]-1,+p[2])}
+function ymd(d){return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0")}
+function mon(d){var x=new Date(d.getFullYear(),d.getMonth(),d.getDate());x.setDate(x.getDate()-(x.getDay()+6)%7);return x}
+if(!/^\d{4}-\d\d-\d\d$/.test(anchor||"")){anchor=ymd(mon(new Date()));try{localStorage.setItem(AKEY,anchor)}catch(e){}}
+function weekNum(vm){return Math.round((vm-mon(pd(anchor)))/6048e5)+1}
+var FKEY="class-planner-first",first="odd";
+try{first=localStorage.getItem(FKEY)==="even"?"even":"odd"}catch(e){}
+var EKEY="class-planner-end",endD="";
+try{endD=localStorage.getItem(EKEY)||""}catch(e){}
+if(!/^\d{4}-\d\d-\d\d$/.test(endD))endD="";
+function isOdd(vm){var o=((weekNum(vm)%2)+2)%2===1;return first==="odd"?o:!o}
+function cut(c,vm,d){if(c.date||!endD)return false;var x=new Date(vm);x.setDate(x.getDate()+d);return ymd(x)>endD}
+function dayList(c){return c.date?[(pd(c.date).getDay()+6)%7]:c.days}
+function active(c,vm,odd){if(c.date){var d=pd(c.date),e=new Date(vm);e.setDate(e.getDate()+7);return d>=vm&&d<e}
+  if(endD&&ymd(vm)>endD)return false;
+  var n=weekNum(vm);if(c.from&&n<c.from)return false;if(c.until&&n>c.until)return false;
+  var w=c.weeks||"all";if(w==="all")return true;if(w==="odd")return odd;if(w==="even")return !odd;
+  var k=+w;return (((n-(c.from||1))%k)+k)%k===0}
+function rep(c){var w=c.weeks,t=(w==="odd"||w==="even")?w+" weeks":(+w?"every "+w+" weeks":"");if(c.from||c.until)t+=(t?", ":"")+"weeks "+(c.from||1)+"–"+(c.until||"end");return t?" ("+t+")":""}
+var MF=["January","February","March","April","May","June","July","August","September","October","November","December"];
+function monthGrid(){
+  var t=new Date(),b=new Date(t.getFullYear(),t.getMonth()+mo,1),M=b.getMonth(),last=new Date(b.getFullYear(),M+1,0);
+  $("#wrange").textContent=MF[M]+" "+b.getFullYear();$("#wpar").textContent=mo===0?"This month":"";
+  $("#warn").hidden=true;$("#ltitle").textContent="Classes and events";
+  var h='<div class="gh"></div>'+DAYS.map(function(x){return '<div class="gh">'+x+'</div>'}).join(""),d=mon(b);
+  while(d<=last){
+    var vm=new Date(d),odd=isOdd(vm),n=weekNum(vm);
+    h+='<div class="wk">'+(n>0?"W"+n:"")+'<small>'+(odd?"odd":"even")+'</small></div>';
+    for(var k=0;k<7;k++){
+      var items=cls.concat(examItems()).filter(function(c){return active(c,vm,odd)&&dayList(c).indexOf(k)>-1&&!cut(c,vm,k)}).sort(function(a,z){return tm(a.start||"00:00")-tm(z.start||"00:00")});
+      h+='<div class="mc'+(d.getMonth()!==M?" out":"")+(ymd(d)===ymd(t)?" today":"")+'"><button class="dn" data-wk="'+Math.round((vm-mon(t))/6048e5)+'">'+d.getDate()+'</button>'+items.map(function(c){return '<button class="mi'+(c.exam?" ex":c.date?" ev":"")+'" '+(c.exam?'data-ex="'+c.eid+'"':'data-id="'+c.id+'"')+' style="--h:'+c.hue+'">'+(c.start?c.start+' ':'')+esc(c.name)+'</button>'}).join("")+'</div>';
+      d.setDate(d.getDate()+1);
+    }
+  }
+  $("#mgrid").innerHTML=h;
+}
+var MN=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+function head(vm,odd){var e=new Date(vm);e.setDate(e.getDate()+6);$("#wrange").textContent=vm.getDate()+" "+MN[vm.getMonth()]+" – "+e.getDate()+" "+MN[e.getMonth()];var n=Math.round((vm-mon(pd(anchor)))/6048e5)+1;$("#wpar").textContent=(endD&&ymd(vm)>endD?"After semester · ":n>0?"Week "+n+" · ":"Before semester · ")+(odd?"Odd":"Even")+" week"+(off===0?" · this week":"")}
+var tm=function(t){var p=t.split(":");return +p[0]*60+ +p[1]};
+function esc(s){return String(s).replace(/[&<>"]/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]})}
+
+function buildChips(){
+  $("#kind").innerHTML=[["class","Weekly class"],["event","One-off event"]].map(function(k){return '<button type="button" class="chip" data-k="'+k[0]+'" aria-pressed="'+(kind===k[0])+'">'+k[1]+'</button>'}).join("");
+  $("#dateWrap").hidden=kind!=="event";$("#wkWrap").hidden=$("#wfWrap").hidden=$("#wuWrap").hidden=kind==="event";$("#days").hidden=kind==="event";
+  $("#days").innerHTML=DAYS.map(function(d,i){return '<button type="button" class="chip" data-d="'+i+'" aria-pressed="'+(picked.indexOf(i)>-1)+'">'+d+'</button>'}).join("");
+  $("#hues").innerHTML=HUES.map(function(h){return '<button type="button" class="sw" data-h="'+h+'" style="--h:'+h+'" aria-label="Colour '+h+'" aria-pressed="'+(h===hue)+'"></button>'}).join("")+'<span class="sw" id="hp" style="--h:'+hue+';display:inline-block;cursor:default"></span><input type="range" id="hs" min="0" max="359" value="'+hue+'" aria-label="Custom colour" style="width:140px;accent-color:hsl('+hue+' 65% 50%)"><input type="color" id="cp" value="'+hue2hex(hue)+'" aria-label="Pick any colour" style="width:36px;height:28px;padding:0;border:1px solid var(--line);border-radius:6px;background:none;cursor:pointer">';
+}
+$("#days").onclick=function(e){var b=e.target.closest(".chip");if(!b)return;var d=+b.dataset.d,i=picked.indexOf(d);if(i>-1)picked.splice(i,1);else picked.push(d);buildChips()};
+$("#hues").onclick=function(e){var b=e.target.closest(".sw[data-h]");if(!b)return;hue=+b.dataset.h;buildChips()};
+function hex2hue(h){var r=parseInt(h.slice(1,3),16)/255,g=parseInt(h.slice(3,5),16)/255,b=parseInt(h.slice(5,7),16)/255,mx=Math.max(r,g,b),d=mx-Math.min(r,g,b),x;if(!d)return 0;if(mx===r)x=((g-b)/d)%6;else if(mx===g)x=(b-r)/d+2;else x=(r-g)/d+4;return (Math.round(x*60)+360)%360}
+function hue2hex(h){var c=.65,x=c*(1-Math.abs((h/60)%2-1)),m=.175,v=[[c,x,0],[x,c,0],[0,c,x],[0,x,c],[x,0,c],[c,0,x]][Math.floor(h/60)%6];return "#"+v.map(function(n){return ("0"+Math.round((n+m)*255).toString(16)).slice(-2)}).join("")}
+$("#hues").oninput=function(e){var id=e.target.id;if(id!=="hs"&&id!=="cp")return;hue=id==="cp"?hex2hue(e.target.value):+e.target.value;var sl=$("#hs");sl.value=hue;sl.style.accentColor="hsl("+hue+" 65% 50%)";if(id==="hs")$("#cp").value=hue2hex(hue);$("#hp").style.setProperty("--h",hue);Array.prototype.forEach.call(this.querySelectorAll(".sw[data-h]"),function(s){s.setAttribute("aria-pressed",String(+s.dataset.h===hue))})};
+
+$("#kind").onclick=function(e){var b=e.target.closest(".chip");if(!b)return;kind=b.dataset.k;buildChips()};
+function resetForm(){
+  editing=null;picked=[];hue=HUES[cls.length%HUES.length];kind="class";$("#date").value=ymd(new Date());$("#wk").value="all";$("#wfrom").value=$("#wuntil").value="";
+  $("#name").value="";$("#loc").value="";$("#teacher").value="";$("#code").value="";$("#notes").value="";typeSel("","");$("#start").value="09:00";$("#end").value="10:30";
+  $("#ftitle").textContent="Add a class";$("#save").textContent="Add class";
+  $("#cancel").hidden=true;$("#del").hidden=true;$("#msg").textContent="";
+  buildChips();render();
+}
+function edit(id){
+  var c=cls.find(function(x){return x.id===id});if(!c)return;
+  editing=id;picked=c.date?[]:c.days.slice();hue=c.hue;kind=c.date?"event":"class";$("#date").value=c.date||ymd(new Date());$("#wk").value=c.weeks||"all";$("#wfrom").value=c.from||"";$("#wuntil").value=c.until||"";
+  if(c.date)off=Math.round((mon(pd(c.date))-mon(new Date()))/6048e5);
+  $("#name").value=c.name;$("#loc").value=c.loc||"";$("#teacher").value=c.teacher||"";$("#code").value=c.code||"";$("#notes").value=c.notes||"";typeSel(c.type||"",c.vari||"");$("#start").value=c.start;$("#end").value=c.end;
+  $("#ftitle").textContent="Edit class";$("#save").textContent="Save changes";
+  $("#cancel").hidden=false;$("#del").hidden=false;$("#msg").textContent="";
+  buildChips();render();
+  $("#ftitle").scrollIntoView({behavior:"smooth",block:"center"});
+}
+$("#save").onclick=function(){
+  var name=$("#name").value.trim(),s=$("#start").value,e=$("#end").value,m=$("#msg");
+  if(!name){m.textContent="Enter a class name.";return}
+  if(kind==="class"&&+$("#wfrom").value&&+$("#wuntil").value&&+$("#wuntil").value<+$("#wfrom").value){m.textContent="Until week must not come before From week.";return}
+  if(kind==="event"&&!$("#date").value){m.textContent="Pick a date.";return}
+  if(kind==="class"&&!picked.length){m.textContent="Pick at least one day.";return}
+  if(!s||!e||tm(e)<=tm(s)){m.textContent="Set an end time after the start time.";return}
+  var rec={name:name,loc:$("#loc").value.trim(),start:s,end:e,hue:hue,teacher:$("#teacher").value.trim(),code:$("#code").value.trim(),notes:$("#notes").value.trim(),type:$("#type").value,vari:$("#vari").value};
+  if(kind==="event")rec.date=$("#date").value;else{rec.days=picked.slice().sort();rec.weeks=$("#wk").value;rec.from=+$("#wfrom").value||0;rec.until=+$("#wuntil").value||0}
+  if(editing){var c=cls.find(function(x){return x.id===editing});delete c.date;delete c.days;delete c.weeks;delete c.from;delete c.until;Object.assign(c,rec)}
+  else{rec.id=Date.now();cls.push(rec)}
+  if(rec.date){var nw=new Date(),dd=pd(rec.date);off=Math.round((mon(dd)-mon(nw))/6048e5);mo=(dd.getFullYear()-nw.getFullYear())*12+dd.getMonth()-nw.getMonth()}
+  persist();resetForm();
+};
+$("#cancel").onclick=resetForm;
+$("#del").onclick=function(){cls=cls.filter(function(x){return x.id!==editing});persist();resetForm()};
+
+function render(){
+  $("#grid").hidden=view==="month";$("#mgrid").hidden=view!=="month";
+  $("#vwk").setAttribute("aria-pressed",String(view==="week"));$("#vmo").setAttribute("aria-pressed",String(view==="month"));
+  var vm=mon(new Date());vm.setDate(vm.getDate()+off*7);
+  var odd=isOdd(vm),act=cls.concat(examItems().filter(function(z){return z.start})).filter(function(c){return active(c,vm,odd)});
+  var xd=examItems().filter(function(z){return !z.start&&active(z,vm,odd)});
+  head(vm,odd);
+  var vis=[0,1,2,3,4];
+  act.concat(xd).forEach(function(c){dayList(c).forEach(function(d){if(d>4&&vis.indexOf(d)<0)vis.push(d)})});
+  if(off===0){var ti=(new Date().getDay()+6)%7;if(ti>4&&vis.indexOf(ti)<0)vis.push(ti)}
+  vis.sort();
+  var lo=8,hi=18,H=48;
+  act.forEach(function(c){lo=Math.min(lo,Math.floor(tm(c.start)/60));hi=Math.max(hi,Math.ceil(tm(c.end)/60))});
+  var h='<div class="gh"></div>'+vis.map(function(d){return '<div class="gh'+(off===0&&d===(new Date().getDay()+6)%7?' today':'')+'">'+DAYS[d]+xd.filter(function(z){return dayList(z).indexOf(d)>-1}).map(function(z){return '<button class="xt" data-ex="'+z.eid+'">'+esc(z.name)+'</button>'}).join("")+'</div>'}).join("");
+  var tc="";for(var i=lo;i<hi;i++)tc+='<div class="tl" style="height:'+H+'px">'+i+':00</div>';
+  h+='<div>'+tc+'</div>';
+  var clash={};
+  vis.forEach(function(d){
+    var items=act.filter(function(c){return dayList(c).indexOf(d)>-1&&!cut(c,vm,d)}).sort(function(a,b){return tm(a.start)-tm(b.start)||a.id-b.id});
+    var blocks="";
+    items.forEach(function(c){
+      var ov=items.filter(function(o){return tm(o.start)<tm(c.end)&&tm(c.start)<tm(o.end)});
+      var bad=!c.date&&ov.some(function(o){return o!==c&&!o.date});if(bad)clash[c.id]=1;
+      var n=ov.length,k=ov.indexOf(c);
+      var top=(tm(c.start)-lo*60)/60*H,ht=(tm(c.end)-tm(c.start))/60*H;
+      blocks+='<button class="blk'+(c.exam?" ex":c.date?" ev":"")+(bad?" clash":"")+(editing===c.id?" sel":"")+'" '+(c.exam?'data-ex="'+c.eid+'"':'data-id="'+c.id+'"')+' style="--h:'+c.hue+';top:'+top+'px;height:'+(ht-2)+'px;left:calc('+(k*100/n)+'% + 2px);width:calc('+(100/n)+'% - 4px)"><b>'+esc(c.name)+'</b>'+(c.type?'<span>'+esc(c.type+(c.vari?" · "+c.vari:""))+'</span>':"")+'<span>'+c.start+'–'+c.end+'</span>'+(c.loc?'<span>'+esc(c.loc)+'</span>':"")+'</button>';
+    });
+    h+='<div class="col" style="height:'+(hi-lo)*H+'px">'+blocks+'</div>';
+  });
+  var g=$("#grid");
+  g.style.gridTemplateColumns="40px repeat("+vis.length+",minmax(0,1fr))";
+  g.innerHTML=h;
+  gmeta={lo:lo,hi:hi,H:H,vis:vis};placeNow();
+
+  var names=cls.filter(function(c){return clash[c.id]}).map(function(c){return c.name});
+  var w=$("#warn");
+  if(names.length){w.hidden=false;w.textContent="Overlap: "+names.join(", ")+" run at the same time on at least one day."}
+  else w.hidden=true;
+
+  var mins=0;act.filter(function(c){return !c.exam}).forEach(function(c){mins+=(tm(c.end)-tm(c.start))*dayList(c).length});
+  $("#ltitle").textContent=act.length?"Classes and events ("+(Math.round(mins/6)/10)+" hours this week)":"Classes and events";
+  $("#list").innerHTML=cls.length?cls.slice().sort(function(a,b){return a.name.localeCompare(b.name)}).map(function(c){
+    return '<button class="item" data-id="'+c.id+'"><span><i style="--h:'+c.hue+'"></i>'+esc(c.name)+' <small>'+esc([c.type?c.type+(c.vari?" ("+c.vari+")":""):"",c.code,c.loc,c.teacher].filter(Boolean).join(" · "))+'</small>'+(c.notes?'<br><small>'+esc(c.notes)+'</small>':"")+'</span><small>'+(c.date?'One-off, '+c.date:c.days.map(function(d){return DAYS[d]}).join(", ")+rep(c))+' · '+c.start+'–'+c.end+'</small></button>';
+  }).join(""):'<p class="empty">No classes yet. Add your first one above.</p>';
+  if(view==="month")monthGrid();
+  secs();typeSel();
+}
+function pick(e){var x=e.target.closest("[data-ex]");if(x){openEx(x.dataset.ex);return}var b=e.target.closest("[data-id]");if(b)edit(+b.dataset.id)}
+$("#grid").onclick=pick;$("#list").onclick=pick;
+$("#prev").onclick=function(){if(view==="month")mo--;else off--;render()};
+$("#next").onclick=function(){if(view==="month")mo++;else off++;render()};
+$("#today").onclick=function(){off=0;mo=0;render()};
+$("#vwk").onclick=function(){view="week";render()};
+$("#vmo").onclick=function(){view="month";render()};
+$("#mgrid").onclick=function(e){var d=e.target.closest(".dn");if(d){off=+d.dataset.wk;view="week";render();return}pick(e)};
+$("#opts").onclick=function(){var p=$("#optp");p.hidden=!p.hidden;this.setAttribute("aria-expanded",String(!p.hidden))};
+$("#sem").value=anchor;
+$("#fw").value=first;
+$("#semend").value=endD;
+$("#semend").onchange=function(){endD=this.value;try{localStorage.setItem(EKEY,endD)}catch(e){}push();render()};
+$("#fw").onchange=function(){first=this.value;try{localStorage.setItem(FKEY,first)}catch(e){}push();render()};
+$("#sem").onchange=function(){if(!this.value)return;anchor=this.value;try{localStorage.setItem(AKEY,anchor)}catch(e){}push();render()};
+
+resetForm();
+function addm(t,m){var x=Math.min(tm(t)+m,1439);return String(Math.floor(x/60)).padStart(2,"0")+":"+String(x%60).padStart(2,"0")}
+function examItems(){return exams.map(function(z){var k=cls.filter(function(c){return String(c.id)===z.cls&&!c.date})[0];return {id:"e"+z.id,eid:z.id,exam:1,date:z.date,name:(k?k.name+": ":"")+z.title,loc:"Exam"+(z.room?" · "+z.room:""),start:z.time||"",end:z.time?addm(z.time,120):"",hue:k?k.hue:205}})}
+function openEx(id){var t=document.querySelector('#tabs [data-t="ex"]');if(t)t.click();var b=document.querySelector('#exams-l .item[data-id="'+id+'"]');if(b)b.click()}
+function typeSel(a,b){
+  var t=$("#type"),v=$("#vari");if(!t||!v)return;
+  var ct=a!==undefined?a:t.value,cv=b!==undefined?b:v.value;
+  var names=types.map(function(x){return x.name}).filter(Boolean);
+  if(ct&&names.indexOf(ct)<0)names.push(ct);
+  t.innerHTML='<option value="">None</option>'+names.map(function(n){return '<option>'+esc(n)+'</option>'}).join("");
+  t.value=ct;
+  var cur=types.filter(function(x){return x.name===ct})[0],vs=cur?cur.vars.slice():[];
+  if(cv&&vs.indexOf(cv)<0)vs.push(cv);
+  v.innerHTML='<option value="">None</option>'+vs.map(function(n){return '<option>'+esc(n)+'</option>'}).join("");
+  v.value=cv;
+}
+function typeEd(){
+  var el=$("#typed");if(!el)return;
+  el.innerHTML='<h2 style="margin-top:6px">Class types</h2><p class="sub" style="margin:0 0 8px">Name each type and list its variations separated by commas, for example Lab: Group A, Group B.</p>'
+   +types.map(function(x,i){return '<div class="row" style="margin-bottom:8px"><label>Type<input data-i="'+i+'" data-f="name" value="'+esc(x.name)+'" maxlength="30"></label><label style="flex:2 1 200px">Variations<input data-i="'+i+'" data-f="vars" value="'+esc(x.vars.join(", "))+'" maxlength="120"></label><button class="btn del" data-del="'+i+'" style="align-self:end">Remove</button></div>'}).join("")
+   +'<button class="btn" id="addtype">Add type</button>';
+}
+var gmeta=null;
+function placeNow(){
+  var old=document.querySelector("#grid .now");if(old)old.remove();
+  if(view!=="week"||off!==0||!gmeta)return;
+  var n=new Date(),i=gmeta.vis.indexOf((n.getDay()+6)%7),m=n.getHours()*60+n.getMinutes();
+  if(i<0||m<gmeta.lo*60||m>=gmeta.hi*60)return;
+  var col=document.querySelectorAll("#grid .col")[i];if(!col)return;
+  var d=document.createElement("div");d.className="now";d.style.top=((m-gmeta.lo*60)/60*gmeta.H)+"px";
+  d.innerHTML="<span>"+String(n.getHours()).padStart(2,"0")+":"+String(n.getMinutes()).padStart(2,"0")+"</span>";
+  col.appendChild(d);
+}
+setInterval(placeNow,60000);
+function secs(){secDraw.forEach(function(f){f()});tabCounts()}
+function tabCounts(){var td=ymd(new Date()),a=exams.filter(function(z){return z.date>=td}).length,b=tasks.filter(function(z){return !z.done}).length;$("#nx").textContent=a?" ("+a+")":"";$("#nt").textContent=b?" ("+b+")":""}
+$("#tabs").onclick=function(e){var b=e.target.closest(".chip");if(!b)return;var t=b.dataset.t;["sch","ex","as"].forEach(function(k){$("#v-"+k).hidden=k!==t});Array.prototype.forEach.call(this.children,function(c){c.setAttribute("aria-pressed",String(c.dataset.t===t))})};
+function mk(cfg){
+  var p=cfg.k,g=function(s){return $("#"+p+"-"+s)},ed=null,list=function(){return p==="exams"?exams:tasks};
+  $(cfg.box).innerHTML='<section class="card"><h2>'+cfg.add+'</h2><div class="row">'
+   +'<label>Title<input id="'+p+'-t" maxlength="80" placeholder="'+cfg.ph+'"></label>'
+   +'<label>Class<select id="'+p+'-c"></select></label>'
+   +'<label>'+cfg.d+'<input id="'+p+'-d" type="date"></label>'
+   +'<label>Time<input id="'+p+'-h" type="time"></label>'
+   +(cfg.room?'<label>Room<input id="'+p+'-r" maxlength="40"></label>':'')
+   +'</div><label style="margin-top:10px">Notes<textarea id="'+p+'-n" rows="2" maxlength="400"></textarea></label>'
+   +'<div class="acts"><button class="btn pri" id="'+p+'-s">Add</button><button class="btn" id="'+p+'-x" hidden>Cancel</button><button class="btn del" id="'+p+'-del" hidden>Delete</button><span class="err" id="'+p+'-m" role="alert"></span></div></section>'
+   +'<section class="card"><h2>'+cfg.h+'</h2><div id="'+p+'-l"></div></section>';
+  function draw(){
+    var cur=g("c").value,a=list(),td=ymd(new Date());
+    g("c").innerHTML='<option value="">No class</option>'+cls.filter(function(c){return !c.date}).map(function(c){return '<option value="'+c.id+'">'+esc(c.name)+'</option>'}).join("");
+    g("c").value=cur;
+    var rows=a.slice().sort(function(x,y){return (x.date+(x.time||"")).localeCompare(y.date+(y.time||""))});
+    g("l").innerHTML=rows.length?rows.map(function(it){
+      var c=cls.filter(function(k){return String(k.id)===it.cls})[0],n=Math.round((pd(it.date)-pd(td))/864e5),late=n<0&&!it.done;
+      var lab=it.done?"done":n<0?(cfg.done?"overdue":"past"):n===0?"today":n===1?"tomorrow":"in "+n+" days";
+      return '<div class="ir'+(it.done?' done':'')+'">'+(cfg.done?'<input type="checkbox" class="ck" data-id="'+it.id+'"'+(it.done?' checked':'')+' aria-label="Done">':'')+'<button class="item" data-id="'+it.id+'"><span><b>'+esc(it.title)+'</b><br><small>'+esc([c?c.name:(it.course||""),it.room,it.notes].filter(Boolean).join(" · "))+'</small></span><small'+(late?' class="late"':'')+'>'+it.date+(it.time?' '+it.time:'')+' · '+lab+'</small></button></div>';
+    }).join(""):'<p class="empty">'+cfg.empty+'</p>';
+  }
+  function reset(){ed=null;["t","d","h","n"].concat(cfg.room?["r"]:[]).forEach(function(s){g(s).value=""});g("c").value="";g("s").textContent="Add";g("x").hidden=g("del").hidden=true;g("m").textContent="";secs()}
+  g("s").onclick=function(){
+    var t=g("t").value.trim(),d=g("d").value;
+    if(!t){g("m").textContent="Enter a title.";return}
+    if(!d){g("m").textContent="Pick a date.";return}
+    var it={id:ed||Date.now(),title:t,cls:g("c").value,date:d,time:g("h").value,room:cfg.room?g("r").value.trim():"",notes:g("n").value.trim()};
+    var a=list(),i=a.findIndex(function(z){return z.id===ed});
+    if(cfg.done)it.done=i>-1?!!a[i].done:false;
+    if(i>-1){if(a[i].gc)it.gc=a[i].gc;if(a[i].course)it.course=a[i].course}
+    if(i>-1)a[i]=it;else a.push(it);
+    persist();reset();
+  };
+  g("x").onclick=reset;
+  g("del").onclick=function(){var a=list(),i=a.findIndex(function(z){return z.id===ed});if(i>-1)a.splice(i,1);persist();reset()};
+  g("l").onclick=function(e){
+    var k=e.target.closest(".ck"),a=list();
+    if(k){var f=a.filter(function(z){return String(z.id)===k.dataset.id})[0];if(f){f.done=k.checked;persist();secs()}return}
+    var b=e.target.closest(".item");if(!b)return;
+    var it=a.filter(function(z){return String(z.id)===b.dataset.id})[0];if(!it)return;
+    ed=it.id;g("t").value=it.title;g("c").value=it.cls||"";g("d").value=it.date;g("h").value=it.time||"";g("n").value=it.notes||"";if(cfg.room)g("r").value=it.room||"";
+    g("s").textContent="Save changes";g("x").hidden=g("del").hidden=false;g("t").scrollIntoView({behavior:"smooth",block:"center"});
+  };
+  secDraw.push(draw);reset();
+}
+mk({k:"exams",box:"#v-ex",add:"Add an exam",h:"Exams",ph:"Midterm",d:"Date",room:true,done:false,empty:"No exams yet. Add one above."});
+mk({k:"tasks",box:"#v-as",add:"Add an assignment",h:"Assignments",ph:"Problem set 3",d:"Due date",room:false,done:true,empty:"No assignments yet. Add one above."});
+typeEd();
+$("#type").onchange=function(){$("#vari").value="";typeSel()};
+$("#typed").oninput=function(e){var i=e.target.dataset.i;if(i==null)return;var x=types[+i];if(!x)return;if(e.target.dataset.f==="name")x.name=e.target.value.trim();else x.vars=e.target.value.split(",").map(function(s){return s.trim()}).filter(Boolean);persist();typeSel()};
+$("#typed").onclick=function(e){var d=e.target.closest("[data-del]"),a=e.target.closest("#addtype");if(d){types.splice(+d.dataset.del,1);persist();typeEd();typeSel()}else if(a){types.push({name:"New type",vars:[]});persist();typeEd();typeSel()}};
+var undo=null,RT=/^\d{2}:\d{2}$/,RD=/^\d{4}-\d\d-\d\d$/;
+function snap(){return {app:"class-planner",v:1,cls:cls,anchor:anchor,first:first,exams:exams,tasks:tasks,types:types,end:endD}}
+function S(v,n){return typeof v==="string"?v.slice(0,n):""}
+function cleanAll(o){
+  if(!o||typeof o!=="object"||o.app!=="class-planner")throw 0;
+  var c=(Array.isArray(o.cls)?o.cls:[]).filter(function(x){return x&&typeof x.name==="string"&&RT.test(x.start)&&RT.test(x.end)}).map(function(x,i){
+    var r={id:+x.id||Date.now()+i,name:S(x.name,60),loc:S(x.loc,40),start:x.start,end:x.end,hue:+x.hue||0,teacher:S(x.teacher,60),code:S(x.code,20),notes:S(x.notes,400),type:S(x.type,30),vari:S(x.vari,40)};
+    if(RD.test(x.date))r.date=x.date;
+    else{r.days=(Array.isArray(x.days)?x.days:[]).filter(function(d){return d>=0&&d<=6&&d%1===0});r.weeks=["all","odd","even","3","4"].indexOf(x.weeks)>-1?x.weeks:"all";r.from=+x.from||0;r.until=+x.until||0}
+    return r}).filter(function(r){return r.date||r.days.length});
+  function it(x,i,task){var r={id:+x.id||Date.now()+i,title:S(x.title,80),cls:S(String(x.cls||""),30),date:x.date,time:RT.test(x.time)?x.time:"",room:S(x.room,40),notes:S(x.notes,400)};if(task){r.done=!!x.done;r.gc=S(x.gc,80);r.course=S(x.course,80)}return r}
+  var ex=(Array.isArray(o.exams)?o.exams:[]).filter(function(x){return x&&typeof x.title==="string"&&RD.test(x.date)}).map(function(x,i){return it(x,i)});
+  var ta=(Array.isArray(o.tasks)?o.tasks:[]).filter(function(x){return x&&typeof x.title==="string"&&RD.test(x.date)}).map(function(x,i){return it(x,i,1)});
+  var ty=Array.isArray(o.types)?o.types.filter(function(x){return x&&typeof x.name==="string"}).map(function(x){return {name:S(x.name,30),vars:(Array.isArray(x.vars)?x.vars:[]).filter(function(v){return typeof v==="string"}).map(function(v){return S(v,40)})}}):types;
+  return {cls:c,exams:ex,tasks:ta,types:ty,anchor:RD.test(o.anchor)?o.anchor:anchor,first:o.first==="even"||o.first==="odd"?o.first:first,end:RD.test(o.end)?o.end:""};
+}
+function applyAll(d){
+  cls=d.cls;exams=d.exams;tasks=d.tasks;types=d.types;anchor=d.anchor;first=d.first;endD=d.end;try{localStorage.setItem(EKEY,endD)}catch(e){}$("#semend").value=endD;
+  try{localStorage.setItem(AKEY,anchor);localStorage.setItem(FKEY,first)}catch(e){}
+  $("#sem").value=anchor;$("#fw").value=first;persist();typeEd();resetForm();
+}
+function doImport(txt){
+  var m=$("#bkm"),d;
+  try{d=cleanAll(JSON.parse(txt))}catch(e){m.textContent="That does not look like a Class planner backup.";return}
+  undo=JSON.parse(JSON.stringify(snap()));applyAll(d);
+  m.textContent="Imported "+d.cls.length+" classes, "+d.exams.length+" exams and "+d.tasks.length+" assignments. Your previous data was replaced.";
+  $("#bkundo").hidden=false;
+}
+$("#bkexp").onclick=function(){
+  var m=$("#bkm"),txt=JSON.stringify(snap(),null,1),fn="class-planner-backup-"+ymd(new Date())+".json";
+  try{var a=document.createElement("a");a.href=URL.createObjectURL(new Blob([txt],{type:"application/json"}));a.download=fn;document.body.appendChild(a);a.click();a.remove();m.textContent="Backup downloaded."}
+  catch(e){m.textContent="Could not save a file. Use the backup text option below.";$("#bk").value=txt;$("#bk").closest("details").open=true}
+};
+$("#bkimp").onclick=function(){$("#bkfile").click()};
+$("#bkfile").onchange=function(){
+  var f=this.files[0];this.value="";if(!f)return;
+  if(f.size>3e6){$("#bkm").textContent="That file is too large.";return}
+  var r=new FileReader();
+  r.onload=function(){doImport(String(r.result))};
+  r.onerror=function(){$("#bkm").textContent="Could not read that file."};
+  r.readAsText(f);
+};
+$("#bkshow").onclick=function(){var t=$("#bk");t.value=JSON.stringify(snap());t.select()};
+$("#bkload").onclick=function(){doImport($("#bk").value)};
+$("#bkundo").onclick=function(){if(!undo)return;applyAll(cleanAll(undo));undo=null;this.hidden=true;$("#bkm").textContent="Import undone."};
+var GAPI="https://api.github.com",GFILE="class-planner.json";
+function gfetch(path,opt){
+  opt=opt||{};
+  opt.headers=Object.assign({"Accept":"application/vnd.github+json","Authorization":"Bearer "+gh.tok,"X-GitHub-Api-Version":"2022-11-28"},opt.headers||{});
+  return fetch(GAPI+path,opt).then(function(r){if(!r.ok){var e=new Error("HTTP "+r.status);e.status=r.status;throw e}return r.json()});
+}
+function payload(){var o=snap();o.updated=upd;return JSON.stringify(o)}
+function syncErr(e){setSync(e&&(e.status===401||e.status===403)?"GitHub rejected the token. Reconnect in Options.":"Could not sync right now. Changes are saved on this device.")}
+function syncPush(){
+  if(!gh.tok||!gh.id)return;
+  if(pushing){again=true;return}
+  pushing=true;setSync("Syncing...");
+  var f={};f[GFILE]={content:payload()};
+  gfetch("/gists/"+gh.id,{method:"PATCH",body:JSON.stringify({files:f})}).then(function(){setSync("Synced with GitHub.")},syncErr).then(function(){pushing=false;if(again){again=false;syncPush()}});
+}
+function syncPull(){
+  if(!gh.tok||!gh.id||pushing)return Promise.resolve();
+  return gfetch("/gists/"+gh.id).then(function(g){
+    var f=g.files&&g.files[GFILE];if(!f)return;
+    var run=function(txt){
+      var o;try{o=JSON.parse(txt)}catch(e){return}
+      var u=+o.updated||0;
+      if(u>upd){
+        var d;try{d=cleanAll(o)}catch(e){return}
+        applying=true;try{applyAll(d)}finally{applying=false}
+        upd=u;try{localStorage.setItem(UKEY,String(upd))}catch(e){}
+        setSync("Synced with GitHub. Updated from another device.");
+      }else if(u<upd){syncPush()}
+      else setSync("Synced with GitHub.");
+    };
+    if(f.truncated&&f.raw_url)return fetch(f.raw_url).then(function(r){return r.text()}).then(run);
+    run(f.content||"");
+  }).catch(syncErr);
+}
+function ghUI(){
+  var on=!!(gh.tok&&gh.id);
+  $("#ghoff").hidden=!on;$("#ghgo").textContent=on?"Reconnect":"Connect";
+  $("#ghtok").placeholder=on?"Connected. Paste a new token to replace it.":"ghp_...";
+  setSync(on?"Sync with GitHub is on.":"Saved on this device only. Open Options to turn on sync across devices.");
+}
+function syncConnect(){
+  var tok=$("#ghtok").value.trim(),m=$("#ghm");
+  if(!tok){m.textContent="Paste your token first.";return}
+  gh.tok=tok;m.textContent="Connecting...";
+  gfetch("/gists?per_page=100").then(function(list){
+    var g=list.filter(function(x){return x.files&&x.files[GFILE]})[0];
+    var save=function(id){gh.id=id;try{localStorage.setItem("class-planner-gh-token",gh.tok);localStorage.setItem("class-planner-gist",id)}catch(e){}$("#ghtok").value="";ghUI()};
+    if(g){
+      var had=cls.length||exams.length||tasks.length;
+      if(had)undo=JSON.parse(JSON.stringify(snap()));
+      save(g.id);upd=0;
+      return syncPull().then(function(){
+        m.textContent="Connected. Your timetable was loaded from GitHub."+(had?" The data that was on this device was replaced. Press Undo import in Backup to restore it.":"");
+        if(had)$("#bkundo").hidden=false;
+      });
+    }
+    var f={};f[GFILE]={content:payload()};
+    return gfetch("/gists",{method:"POST",body:JSON.stringify({description:"Class planner data",public:false,files:f})}).then(function(g2){
+      save(g2.id);m.textContent="Connected. A private gist was created with your timetable. Connect your other devices with the same token.";setSync("Synced with GitHub.");
+    });
+  }).catch(function(e){
+    gh.tok="";
+    try{gh.tok=localStorage.getItem("class-planner-gh-token")||""}catch(x){}
+    m.textContent=e&&(e.status===401||e.status===403)?"GitHub did not accept that token. Check that it is a classic token with the gist permission.":"Could not connect. Check your internet connection and try again.";
+  });
+}
+$("#ghgo").onclick=syncConnect;
+$("#ghoff").onclick=function(){
+  gh={tok:"",id:""};
+  try{localStorage.removeItem("class-planner-gh-token");localStorage.removeItem("class-planner-gist")}catch(e){}
+  $("#ghm").textContent="Disconnected. Your data stays on this device and in your gist.";ghUI();
+};
+ghUI();
+if(gh.tok&&gh.id)syncPull();
+setInterval(syncPull,45000);
+document.addEventListener("visibilitychange",function(){if(!document.hidden)syncPull()});
+
+var GCKEY="class-planner-gc-client",GCSC="https://www.googleapis.com/auth/classroom.courses.readonly https://www.googleapis.com/auth/classroom.coursework.me.readonly",gcTok="",gcExp=0,gcSeq=0;
+try{$("#gcid").value=localStorage.getItem(GCKEY)||""}catch(e){}
+function gcMsg(t){$("#gcm").textContent=t}
+function gcLoad(){return new Promise(function(res,rej){
+  if(window.google&&google.accounts&&google.accounts.oauth2)return res();
+  var e=document.getElementById("gsi");
+  if(e){e.addEventListener("load",function(){res()});e.addEventListener("error",function(){rej(new Error("load"))});return}
+  var t=document.createElement("script");t.id="gsi";t.src="https://accounts.google.com/gsi/client";t.async=true;
+  t.onload=function(){res()};t.onerror=function(){rej(new Error("load"))};document.head.appendChild(t);
+})}
+function gcToken(id){return new Promise(function(res,rej){
+  if(gcTok&&Date.now()<gcExp)return res(gcTok);
+  gcLoad().then(function(){
+    var c=google.accounts.oauth2.initTokenClient({client_id:id,scope:GCSC,
+      callback:function(r){if(r.error){rej(new Error(r.error));return}gcTok=r.access_token;gcExp=Date.now()+(+r.expires_in-60)*1000;res(gcTok)},
+      error_callback:function(e){rej(new Error((e&&e.type)||"popup"))}});
+    c.requestAccessToken();
+  },rej);
+})}
+function gcGet(path){return fetch("https://classroom.googleapis.com/v1"+path,{headers:{Authorization:"Bearer "+gcTok}}).then(function(r){if(!r.ok){var e=new Error("HTTP "+r.status);e.status=r.status;throw e}return r.json()})}
+function gcAll(path,key){var out=[];function next(tok){return gcGet(path+(tok?"&pageToken="+encodeURIComponent(tok):"")).then(function(d){out=out.concat(d[key]||[]);return d.nextPageToken&&out.length<1000?next(d.nextPageToken):out})}return next("")}
+function gcLocal(d,t){
+  if(!t)return {date:ymd(new Date(d.year,d.month-1,d.day)),time:""};
+  var u=new Date(Date.UTC(d.year,d.month-1,d.day,t.hours||0,t.minutes||0));
+  return {date:ymd(u),time:String(u.getHours()).padStart(2,"0")+":"+String(u.getMinutes()).padStart(2,"0")};
+}
+function gcMatch(name){var n=String(name).toLowerCase();var k=cls.filter(function(c){if(c.date)return false;var x=c.name.toLowerCase();return x&&(n.indexOf(x)>-1||x.indexOf(n)>-1)})[0];return k?String(k.id):""}
+function gcImport(){
+  var id=$("#gcid").value.trim();
+  if(!id){gcMsg("Paste your Google client ID first.");return}
+  try{localStorage.setItem(GCKEY,id)}catch(e){}
+  gcMsg("Waiting for Google...");
+  gcToken(id).then(function(){
+    gcMsg("Reading your courses...");
+    return gcAll("/courses?courseStates=ACTIVE&studentId=me&pageSize=100","courses");
+  }).then(function(courses){
+    if(!courses.length){gcMsg("No active Classroom courses were found for this account.");return}
+    var added=0,updated=0,skipped=0,min=Date.now()-14*864e5;
+    return Promise.all(courses.map(function(co){
+      return Promise.all([
+        gcAll("/courses/"+co.id+"/courseWork?pageSize=100","courseWork"),
+        gcAll("/courses/"+co.id+"/courseWork/-/studentSubmissions?userId=me&pageSize=100","studentSubmissions").catch(function(){return []})
+      ]).then(function(r){
+        var st={};r[1].forEach(function(x){st[x.courseWorkId]=x.state});
+        var cid=gcMatch(co.name);
+        r[0].forEach(function(w){
+          if(!w.dueDate||!w.title){skipped++;return}
+          var l=gcLocal(w.dueDate,w.dueTime);
+          if(pd(l.date).getTime()<min){skipped++;return}
+          var key=co.id+"/"+w.id,done=st[w.id]==="TURNED_IN"||st[w.id]==="RETURNED";
+          var ex=tasks.filter(function(t){return t.gc===key})[0];
+          if(ex){ex.title=S(w.title,80);ex.date=l.date;ex.time=l.time;ex.course=S(co.name,80);if(!ex.cls&&cid)ex.cls=cid;if(done)ex.done=true;updated++}
+          else{tasks.push({id:Date.now()*1000+(gcSeq++),title:S(w.title,80),cls:cid,date:l.date,time:l.time,room:"",notes:"",done:done,gc:key,course:S(co.name,80)});added++}
+        });
+      });
+    })).then(function(){
+      persist();secs();
+      gcMsg("Imported "+added+" new and updated "+updated+" assignments from "+courses.length+" courses. Skipped "+skipped+" with no due date or older than two weeks.");
+    });
+  }).catch(function(e){
+    var m=String(e&&e.message||e);
+    if(e&&e.status===401)gcTok="";
+    gcMsg(e&&e.status===403?"Google refused access. Check that the Classroom API is enabled for your project and that your school allows this app."
+      :e&&e.status===401?"Google rejected the sign-in. Try again."
+      :m==="load"?"Could not load Google sign-in. Check your connection."
+      :/popup|access_denied|closed|blocked/i.test(m)?"Sign-in was cancelled or blocked. Allow pop-ups for this page and try again."
+      :"Could not import from Classroom. "+m);
+  });
+}
+$("#gcgo").onclick=gcImport;
+gcLoad().catch(function(){});
+</script>
+</body>
+</html>
