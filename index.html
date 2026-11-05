@@ -1,34 +1,68 @@
 <!doctype html>
 <html lang="en">
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>My Links</title>
 <style>
   :root { color-scheme: light dark; --bg:#fafafa; --fg:#1a1a1a; --card:#fff; --accent:#4f46e5; --line:#ddd; }
   @media (prefers-color-scheme: dark) { :root { --bg:#121214; --fg:#eee; --card:#1c1c20; --accent:#818cf8; --line:#333; } }
-  body { font:16px system-ui,sans-serif; background:var(--bg); color:var(--fg); max-width:720px; margin:0 auto; padding:24px 16px; }
-  h1 { font-size:1.4rem; display:flex; justify-content:space-between; align-items:center; }
-  #grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(150px,1fr)); gap:12px; margin:20px 0; }
-  .item { position:relative; }
-  .btn { display:block; padding:18px 12px; text-align:center; background:var(--accent); color:#fff; border-radius:12px; text-decoration:none; font-weight:600; word-break:break-word; }
-  .btn:hover { filter:brightness(1.1); }
-  .del { position:absolute; top:-6px; right:-6px; width:24px; height:24px; border-radius:50%; border:0; background:#dc2626; color:#fff; cursor:pointer; display:none; }
-  body.editing .del { display:block; }
-  #edit-panel, #cfg { display:none; background:var(--card); border:1px solid var(--line); border-radius:12px; padding:14px; margin-bottom:14px; }
+  * { box-sizing:border-box; }
+  html { -webkit-text-size-adjust:100%; }
+  body { font:16px/1.4 system-ui,sans-serif; background:var(--bg); color:var(--fg); max-width:720px; margin:0 auto;
+    padding:max(16px,env(safe-area-inset-top)) max(16px,env(safe-area-inset-right)) max(24px,env(safe-area-inset-bottom)) max(16px,env(safe-area-inset-left)); }
+  header { display:flex; flex-wrap:wrap; align-items:center; gap:8px 10px; }
+  h1 { font-size:1.4rem; margin:0 auto 0 0; }
+  .tok { display:none; font-size:.8rem; }
+  .tok.ok { display:inline; color:#16a34a; } .tok.bad { display:inline; color:#dc2626; } .tok.wait { display:inline; opacity:.6; }
+  #grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(140px,1fr)); gap:14px 12px; margin:20px 0; }
+  .item { position:relative; min-width:0; }
+  .btn { display:flex; align-items:center; justify-content:center; gap:8px; min-height:60px; padding:16px 10px; text-align:center; background:var(--accent); color:#fff; border-radius:12px; text-decoration:none; font-weight:600; overflow-wrap:anywhere; -webkit-tap-highlight-color:transparent; }
+  @media (hover:hover) { .btn:hover { filter:brightness(1.1); } }
+  .btn img { width:22px; height:22px; object-fit:contain; flex:none; }
+  .pinmark { position:absolute; top:4px; right:6px; font-size:.8rem; pointer-events:none; }
+  body.editing .pinmark { display:none; }
+  body.editing .item .btn { outline:2px dashed var(--line); outline-offset:2px; cursor:pointer; }
+  .ctl { display:none; justify-content:center; gap:6px; margin-top:8px; }
+  body.editing .ctl { display:flex; }
+  body.byclicks .mv { display:none; }
+  .cbtn { min-width:40px; height:40px; border-radius:8px; border:1px solid var(--line); background:var(--card); color:var(--fg); font-size:1rem; cursor:pointer; }
+  .cbtn.on { background:var(--accent); color:#fff; border-color:var(--accent); }
+  .cbtn.del { color:#dc2626; }
+  #edit-panel, #cfg { display:none; background:var(--card); border:1px solid var(--line); border-radius:12px; padding:14px; margin:14px 0; }
   body.editing #edit-panel, body.editing #cfg { display:block; }
-  input, button.act { font:inherit; padding:8px; border-radius:8px; border:1px solid var(--line); background:var(--bg); color:var(--fg); }
-  input { width:100%; box-sizing:border-box; margin-bottom:8px; }
-  button.act { cursor:pointer; }
-  #status { font-size:.85rem; opacity:.8; min-height:1.2em; }
+  input, .act { font:inherit; padding:8px 12px; border-radius:8px; border:1px solid var(--line); background:var(--bg); color:var(--fg); }
+  .act { min-height:44px; cursor:pointer; }
+  input { width:100%; margin-bottom:8px; min-height:44px; }
+  input:disabled { opacity:.6; }
+  input[type=color] { width:56px; min-height:44px; padding:2px; margin:0 0 0 6px; vertical-align:middle; }
+  .row { display:flex; flex-wrap:wrap; gap:10px 16px; margin-bottom:10px; }
+  #status, #tokmsg { font-size:.85rem; opacity:.8; min-height:1.2em; overflow-wrap:anywhere; }
   small { opacity:.7; }
+  @media (max-width:480px) { h1 { font-size:1.2rem; } #grid { gap:12px 10px; } }
 </style>
 
-<h1>My Links <button class="act" id="toggle">Edit</button></h1>
+<header>
+  <h1>My Links</h1>
+  <span id="tok" class="tok"></span>
+  <select id="sort" class="act" aria-label="Button order">
+    <option value="manual">My order</option>
+    <option value="clicks">Most clicked</option>
+  </select>
+  <button class="act" id="toggle">Edit</button>
+</header>
 
 <div id="edit-panel">
+  <small id="hint"></small>
   <input id="name" placeholder="Button name" maxlength="40">
   <input id="url" placeholder="https://example.com">
+  <input id="icon" placeholder="Icon: an emoji or an https image URL (optional)" maxlength="300">
+  <div class="row">
+    <label>Background <input type="color" id="bg" value="#4f46e5"></label>
+    <label>Text <input type="color" id="color" value="#ffffff"></label>
+  </div>
   <button class="act" id="add">Add button</button>
+  <button class="act" id="cancel" hidden>Cancel</button>
+  <button class="act" id="reset" hidden>Reset to default</button>
 </div>
 
 <div id="grid"></div>
@@ -38,41 +72,90 @@
   <input id="repo" placeholder="Site repo owner/name (auto on github.io)">
   <input id="gist" placeholder="Gist ID (optional on first use)">
   <input id="token" type="password" placeholder="GitHub token">
-  <button class="act" id="savecfg">Save settings</button>
+  <button class="act" id="savecfg">Save and check token</button>
+  <div id="tokmsg"></div>
 </div>
 
 <div id="status"></div>
 
 <script>
 const $ = s => document.querySelector(s);
-const cfg = JSON.parse(localStorage.getItem('cfg') || '{}'); // {gist, token}
-let links = [], auto = [];
+const cfg = JSON.parse(localStorage.getItem('cfg') || '{}'); // {repo, gist, token}
+const FILE = 'links.json', DEF = { bg: '#4f46e5', color: '#ffffff' }, HEX = /^#[0-9a-f]{6}$/i;
+const uid = () => Math.random().toString(36).slice(2, 10);
+const clicks = JSON.parse(localStorage.getItem('clicks') || '{}'); // shortcut: click counts stay in this browser, not synced
+let data = norm([]), auto = [];
+let editKey = null;
+
+// accepts the old array format and untrusted gist data
+function norm(x) {
+  const d = Array.isArray(x) ? { links: x } : (x && typeof x === 'object' ? x : {});
+  d.links = (Array.isArray(d.links) ? d.links : []).map(l => ({ ...l, id: l.id || uid() }));
+  d.overrides = d.overrides && typeof d.overrides === 'object' && !Array.isArray(d.overrides) ? d.overrides : {};
+  d.order = Array.isArray(d.order) ? d.order : [];
+  d.pins = Array.isArray(d.pins) ? d.pins : [];
+  d.sort = d.sort === 'clicks' ? 'clicks' : 'manual';
+  return d;
+}
+const local = () => norm(JSON.parse(localStorage.getItem('data') || localStorage.getItem('links') || '[]'));
 
 const hdr = () => ({ Accept: 'application/vnd.github+json', ...(cfg.token && { Authorization: 'Bearer ' + cfg.token }) });
+// a bad token must not break reading public data, so retry without it
+const get = async url => { const r = await fetch(url, { headers: hdr() }); return r.status === 401 ? fetch(url) : r; };
 const status = t => $('#status').textContent = t;
-const FILE = 'links.json';
 const saveCfg = () => localStorage.setItem('cfg', JSON.stringify(cfg));
+
+const TOKTXT = { ok: '✓ token valid', bad: '✗ token problem', wait: '… checking token' };
+function setTok(level, msg) {
+  $('#tok').className = 'tok ' + level; $('#tok').textContent = TOKTXT[level] || ''; $('#tok').title = msg;
+  $('#tokmsg').textContent = msg;
+}
+
+async function checkToken() {
+  if (!cfg.token) return setTok('', 'No token: changes stay in this browser.');
+  setTok('wait', 'Checking token...');
+  try {
+    const u = await fetch('https://api.github.com/user', { headers: hdr() });
+    if (u.status === 401) return setTok('bad', 'Invalid or expired token.');
+    if (!u.ok) return setTok('bad', 'Check failed: GitHub ' + u.status);
+    const login = (await u.json()).login;
+    const scopes = u.headers.get('x-oauth-scopes'); // null for fine-grained tokens
+    if (scopes !== null) {
+      if (!scopes.split(',').map(x => x.trim()).includes('gist')) return setTok('bad', 'Token works but lacks the "gist" scope.');
+    } else {
+      const g = await fetch('https://api.github.com/gists?per_page=1', { headers: hdr() });
+      if (!g.ok) return setTok('bad', 'Token works but has no Gists permission.');
+    }
+    if (cfg.gist) {
+      const g = await fetch('https://api.github.com/gists/' + cfg.gist, { headers: hdr() });
+      if (!g.ok) return setTok('bad', 'Gist not found: GitHub ' + g.status);
+      const owner = (await g.json()).owner;
+      if (!owner || owner.login !== login) return setTok('bad', 'Gist belongs to someone else: this token cannot write it.');
+    }
+    setTok('ok', 'Valid as ' + login + '.' + (scopes === null ? ' Gists read works; write is confirmed on first save.' : ''));
+  } catch (e) { setTok('bad', 'Check failed: ' + e.message); }
+}
 
 async function load() {
   try {
     if (cfg.gist) {
-      const r = await fetch('https://api.github.com/gists/' + cfg.gist, { headers: hdr() });
+      const r = await get('https://api.github.com/gists/' + cfg.gist);
       if (!r.ok) throw new Error('GitHub ' + r.status);
       const f = (await r.json()).files[FILE];
-      links = f ? JSON.parse(f.content) : [];
-    } else links = JSON.parse(localStorage.getItem('links') || '[]');
+      data = f ? norm(JSON.parse(f.content)) : norm([]);
+    } else data = local();
   } catch (e) {
     status('Load failed (' + e.message + '). Showing local copy.');
-    links = JSON.parse(localStorage.getItem('links') || '[]');
+    data = local();
   }
   render();
 }
 
 async function save() {
-  localStorage.setItem('links', JSON.stringify(links));
+  localStorage.setItem('data', JSON.stringify(data));
   if (!cfg.token) return status('Saved locally only. Add token to sync.');
   status('Saving to gist...');
-  const content = JSON.stringify(links, null, 2);
+  const content = JSON.stringify(data, null, 2);
   // shortcut: last write wins, no conflict check; upgrade if two devices edit at once
   const r = cfg.gist
     ? await fetch('https://api.github.com/gists/' + cfg.gist, { method: 'PATCH', headers: hdr(), body: JSON.stringify({ files: { [FILE]: { content } } }) })
@@ -96,7 +179,7 @@ async function loadSite() {
   const repo = repoGuess(); auto = [];
   if (repo) {
     try {
-      const r = await fetch('https://api.github.com/repos/' + repo + '/git/trees/HEAD?recursive=1', { headers: hdr() });
+      const r = await get('https://api.github.com/repos/' + repo + '/git/trees/HEAD?recursive=1');
       if (!r.ok) throw new Error('GitHub ' + r.status);
       const files = (await r.json()).tree
         .filter(f => f.type === 'blob' && /\.html?$/i.test(f.path) && f.path !== 'index.html').map(f => f.path);
@@ -110,36 +193,126 @@ async function loadSite() {
   render();
 }
 
+// every button, custom or auto, as {key, name, url, bg, color, icon, auto?, base?}
+const items = () => [
+  ...data.links.map(l => ({ ...l, key: l.id })),
+  ...auto.map(l => {
+    const key = 'auto:' + l.url, o = data.overrides[key] || {};
+    return { key, auto: true, base: l.name, url: l.url, name: o.name || l.name, bg: o.bg, color: o.color, icon: o.icon };
+  })
+];
+const isPinned = k => data.pins.includes(k);
+const fullOrder = () => { const keys = items().map(i => i.key); return [...data.order, ...keys.filter(k => !data.order.includes(k))]; };
+
+function view() {
+  const o = fullOrder(), n = k => clicks[k] || 0;
+  return items().sort((a, b) => isPinned(b.key) - isPinned(a.key)
+    || (data.sort === 'clicks' ? n(b.key) - n(a.key) : 0)
+    || o.indexOf(a.key) - o.indexOf(b.key));
+}
+
+function move(key, dir) {
+  const v = view(), i = v.findIndex(x => x.key === key), j = i + dir;
+  if (!v[j] || isPinned(v[j].key) !== isPinned(key)) return; // pinned and unpinned keep their own groups
+  const o = fullOrder(), a = o.indexOf(key), b = o.indexOf(v[j].key);
+  [o[a], o[b]] = [o[b], o[a]];
+  data.order = o; render(); save();
+}
+
+const togglePin = k => { data.pins = isPinned(k) ? data.pins.filter(x => x !== k) : [...data.pins, k]; render(); save(); };
+
+function fillForm(it) {
+  editKey = it ? it.key : null;
+  $('#name').value = it ? it.name : ''; $('#url').value = it ? it.url : ''; $('#icon').value = it ? it.icon || '' : '';
+  $('#url').disabled = !!(it && it.auto);
+  $('#bg').value = it && HEX.test(it.bg) ? it.bg : DEF.bg; $('#color').value = it && HEX.test(it.color) ? it.color : DEF.color;
+  $('#add').textContent = it ? 'Save changes' : 'Add button';
+  $('#cancel').hidden = !it; $('#reset').hidden = !(it && it.auto);
+  $('#hint').textContent = it && it.auto ? 'Repo button: the link is fixed, the rest is yours.' : 'Click a button below to edit it.';
+}
+
+function startEdit(it) {
+  fillForm(it);
+  $('#edit-panel').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  $('#name').focus();
+}
+
+const mkBtn = (txt, title, cls, fn) => {
+  const b = document.createElement('button');
+  b.className = 'cbtn ' + cls; b.textContent = txt; b.title = title; b.setAttribute('aria-label', title); b.onclick = fn;
+  return b;
+};
+
 function render() {
+  document.body.classList.toggle('byclicks', data.sort === 'clicks');
+  $('#sort').value = data.sort;
   const g = $('#grid'); g.textContent = '';
-  links.forEach((l, i) => {
+  view().forEach(it => {
     const d = document.createElement('div'); d.className = 'item';
-    const a = document.createElement('a'); a.className = 'btn'; a.href = l.url; a.textContent = l.name;
+    const a = document.createElement('a'); a.className = 'btn';
+    if (it.auto || /^https?:\/\//i.test(it.url)) a.href = it.url; // gist data is untrusted: no javascript: links
     a.rel = 'noopener noreferrer';
-    const x = document.createElement('button'); x.className = 'del'; x.textContent = '×'; x.title = 'Delete';
-    x.onclick = () => { links.splice(i, 1); render(); save(); };
-    d.append(a, x); g.append(d);
-  });
-  auto.forEach(l => {
-    const a = document.createElement('a'); a.className = 'btn'; a.href = l.url; a.textContent = l.name;
-    g.append(a);
+    if (HEX.test(it.bg)) a.style.background = it.bg;
+    if (HEX.test(it.color)) a.style.color = it.color;
+    if (it.icon) {
+      const ic = /^https?:\/\//i.test(it.icon)
+        ? Object.assign(document.createElement('img'), { src: it.icon, alt: '', referrerPolicy: 'no-referrer' })
+        : Object.assign(document.createElement('span'), { textContent: it.icon });
+      a.append(ic);
+    }
+    a.append(document.createTextNode(it.name));
+    a.onclick = e => {
+      if (document.body.classList.contains('editing')) { e.preventDefault(); startEdit(it); return; }
+      clicks[it.key] = (clicks[it.key] || 0) + 1;
+      localStorage.setItem('clicks', JSON.stringify(clicks));
+    };
+    d.append(a);
+    if (isPinned(it.key)) { const p = document.createElement('span'); p.className = 'pinmark'; p.textContent = '📌'; d.append(p); }
+    const ctl = document.createElement('div'); ctl.className = 'ctl';
+    ctl.append(
+      mkBtn('‹', 'Move earlier', 'mv', () => move(it.key, -1)),
+      mkBtn('📌', isPinned(it.key) ? 'Unpin' : 'Pin', isPinned(it.key) ? 'on' : '', () => togglePin(it.key)),
+      mkBtn('›', 'Move later', 'mv', () => move(it.key, 1))
+    );
+    if (!it.auto) ctl.append(mkBtn('×', 'Delete', 'del', () => {
+      data.links = data.links.filter(l => l.id !== it.key);
+      data.pins = data.pins.filter(k => k !== it.key); data.order = data.order.filter(k => k !== it.key);
+      fillForm(null); render(); save();
+    }));
+    d.append(ctl); g.append(d);
   });
 }
 
 $('#add').onclick = () => {
-  const name = $('#name').value.trim();
-  let url = $('#url').value.trim();
-  if (!name || !url) return status('Need name and URL.');
-  if (!/^[a-z][a-z0-9+.-]*:/i.test(url)) url = 'https://' + url;
-  try { if (!/^https?:$/.test(new URL(url).protocol)) throw 0; } catch { return status('URL must be http(s).'); }
-  links.push({ name, url });
-  $('#name').value = $('#url').value = '';
-  render(); save();
+  const name = $('#name').value.trim(), icon = $('#icon').value.trim(), bg = $('#bg').value, color = $('#color').value;
+  const cur = editKey && items().find(i => i.key === editKey);
+  if (cur && cur.auto) {
+    const o = {};
+    if (name && name !== cur.base) o.name = name;
+    if (bg !== DEF.bg) o.bg = bg;
+    if (color !== DEF.color) o.color = color;
+    if (icon) o.icon = icon;
+    if (Object.keys(o).length) data.overrides[cur.key] = o; else delete data.overrides[cur.key];
+  } else {
+    let url = $('#url').value.trim();
+    if (!name || !url) return status('Need name and URL.');
+    if (!/^[a-z][a-z0-9+.-]*:/i.test(url)) url = 'https://' + url;
+    try { if (!/^https?:$/.test(new URL(url).protocol)) throw 0; } catch { return status('URL must be http(s).'); }
+    const l = { id: cur ? cur.key : uid(), name, url, bg, color, icon };
+    const i = data.links.findIndex(x => x.id === l.id);
+    if (i >= 0) data.links[i] = l; else data.links.push(l);
+  }
+  fillForm(null); render(); save();
 };
 
+$('#cancel').onclick = () => fillForm(null);
+$('#reset').onclick = () => { delete data.overrides[editKey]; fillForm(null); render(); save(); };
+$('#sort').onchange = e => { data.sort = e.target.value; render(); save(); };
+
 $('#toggle').onclick = () => {
-  document.body.classList.toggle('editing');
-  $('#toggle').textContent = document.body.classList.contains('editing') ? 'Done' : 'Edit';
+  const on = document.body.classList.toggle('editing');
+  $('#toggle').textContent = on ? 'Done' : 'Edit';
+  if (!on) fillForm(null);
 };
 
 $('#repo').value = cfg.repo || '';
@@ -147,9 +320,10 @@ $('#gist').value = cfg.gist || '';
 $('#token').value = cfg.token || '';
 $('#savecfg').onclick = () => {
   cfg.repo = $('#repo').value.trim(); cfg.gist = $('#gist').value.trim(); cfg.token = $('#token').value.trim();
-  saveCfg(); load(); loadSite();
+  saveCfg(); load(); loadSite(); checkToken();
 };
 
-load(); loadSite();
+fillForm(null);
+load(); loadSite(); checkToken();
 </script>
 </html>
