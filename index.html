@@ -1,0 +1,123 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>My Links</title>
+<style>
+  :root { color-scheme: light dark; --bg:#fafafa; --fg:#1a1a1a; --card:#fff; --accent:#4f46e5; --line:#ddd; }
+  @media (prefers-color-scheme: dark) { :root { --bg:#121214; --fg:#eee; --card:#1c1c20; --accent:#818cf8; --line:#333; } }
+  body { font:16px system-ui,sans-serif; background:var(--bg); color:var(--fg); max-width:720px; margin:0 auto; padding:24px 16px; }
+  h1 { font-size:1.4rem; display:flex; justify-content:space-between; align-items:center; }
+  #grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(150px,1fr)); gap:12px; margin:20px 0; }
+  .item { position:relative; }
+  .btn { display:block; padding:18px 12px; text-align:center; background:var(--accent); color:#fff; border-radius:12px; text-decoration:none; font-weight:600; word-break:break-word; }
+  .btn:hover { filter:brightness(1.1); }
+  .del { position:absolute; top:-6px; right:-6px; width:24px; height:24px; border-radius:50%; border:0; background:#dc2626; color:#fff; cursor:pointer; display:none; }
+  body.editing .del { display:block; }
+  #edit-panel, #cfg { display:none; background:var(--card); border:1px solid var(--line); border-radius:12px; padding:14px; margin-bottom:14px; }
+  body.editing #edit-panel, body.editing #cfg { display:block; }
+  input, button.act { font:inherit; padding:8px; border-radius:8px; border:1px solid var(--line); background:var(--bg); color:var(--fg); }
+  input { width:100%; box-sizing:border-box; margin-bottom:8px; }
+  button.act { cursor:pointer; }
+  #status { font-size:.85rem; opacity:.8; min-height:1.2em; }
+  small { opacity:.7; }
+</style>
+
+<h1>My Links <button class="act" id="toggle">Edit</button></h1>
+
+<div id="edit-panel">
+  <input id="name" placeholder="Button name" maxlength="40">
+  <input id="url" placeholder="https://example.com">
+  <button class="act" id="add">Add button</button>
+</div>
+
+<div id="grid"></div>
+
+<div id="cfg">
+  <strong>GitHub Gist sync</strong><br><small>Token needs the Gists write permission (classic token: <code>gist</code> scope). Leave Gist ID empty on first use: it is created on first save. Stored in this browser only.</small>
+  <input id="gist" placeholder="Gist ID (optional on first use)">
+  <input id="token" type="password" placeholder="GitHub token">
+  <button class="act" id="savecfg">Save settings</button>
+</div>
+
+<div id="status"></div>
+
+<script>
+const $ = s => document.querySelector(s);
+const cfg = JSON.parse(localStorage.getItem('cfg') || '{}'); // {gist, token}
+let links = [];
+
+const hdr = () => ({ Accept: 'application/vnd.github+json', ...(cfg.token && { Authorization: 'Bearer ' + cfg.token }) });
+const status = t => $('#status').textContent = t;
+const FILE = 'links.json';
+const saveCfg = () => localStorage.setItem('cfg', JSON.stringify(cfg));
+
+async function load() {
+  try {
+    if (cfg.gist) {
+      const r = await fetch('https://api.github.com/gists/' + cfg.gist, { headers: hdr() });
+      if (!r.ok) throw new Error('GitHub ' + r.status);
+      const f = (await r.json()).files[FILE];
+      links = f ? JSON.parse(f.content) : [];
+    } else links = JSON.parse(localStorage.getItem('links') || '[]');
+  } catch (e) {
+    status('Load failed (' + e.message + '). Showing local copy.');
+    links = JSON.parse(localStorage.getItem('links') || '[]');
+  }
+  render();
+}
+
+async function save() {
+  localStorage.setItem('links', JSON.stringify(links));
+  if (!cfg.token) return status('Saved locally only. Add token to sync.');
+  status('Saving to gist...');
+  const content = JSON.stringify(links, null, 2);
+  // shortcut: last write wins, no conflict check; upgrade if two devices edit at once
+  const r = cfg.gist
+    ? await fetch('https://api.github.com/gists/' + cfg.gist, { method: 'PATCH', headers: hdr(), body: JSON.stringify({ files: { [FILE]: { content } } }) })
+    : await fetch('https://api.github.com/gists', { method: 'POST', headers: hdr(), body: JSON.stringify({ description: 'My Links', public: false, files: { [FILE]: { content } } }) });
+  if (!r.ok) return status('Sync failed: GitHub ' + r.status);
+  if (!cfg.gist) {
+    cfg.gist = (await r.json()).id; saveCfg(); $('#gist').value = cfg.gist;
+    status('Created gist ' + cfg.gist + '. Use this ID on your other devices.');
+  } else status('Synced to gist.');
+}
+
+function render() {
+  const g = $('#grid'); g.textContent = '';
+  links.forEach((l, i) => {
+    const d = document.createElement('div'); d.className = 'item';
+    const a = document.createElement('a'); a.className = 'btn'; a.href = l.url; a.textContent = l.name;
+    a.rel = 'noopener noreferrer';
+    const x = document.createElement('button'); x.className = 'del'; x.textContent = '×'; x.title = 'Delete';
+    x.onclick = () => { links.splice(i, 1); render(); save(); };
+    d.append(a, x); g.append(d);
+  });
+}
+
+$('#add').onclick = () => {
+  const name = $('#name').value.trim();
+  let url = $('#url').value.trim();
+  if (!name || !url) return status('Need name and URL.');
+  if (!/^[a-z][a-z0-9+.-]*:/i.test(url)) url = 'https://' + url;
+  try { if (!/^https?:$/.test(new URL(url).protocol)) throw 0; } catch { return status('URL must be http(s).'); }
+  links.push({ name, url });
+  $('#name').value = $('#url').value = '';
+  render(); save();
+};
+
+$('#toggle').onclick = () => {
+  document.body.classList.toggle('editing');
+  $('#toggle').textContent = document.body.classList.contains('editing') ? 'Done' : 'Edit';
+};
+
+$('#gist').value = cfg.gist || '';
+$('#token').value = cfg.token || '';
+$('#savecfg').onclick = () => {
+  cfg.gist = $('#gist').value.trim(); cfg.token = $('#token').value.trim();
+  saveCfg(); load();
+};
+
+load();
+</script>
+</html>
