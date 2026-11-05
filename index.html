@@ -98,9 +98,13 @@ async function loadSite() {
     try {
       const r = await fetch('https://api.github.com/repos/' + repo + '/git/trees/HEAD?recursive=1', { headers: hdr() });
       if (!r.ok) throw new Error('GitHub ' + r.status);
-      auto = (await r.json()).tree
-        .filter(f => f.type === 'blob' && /\.html?$/i.test(f.path) && f.path !== 'index.html')
-        .map(f => ({ name: f.path.replace(/(\/index)?\.html?$/i, ''), url: encodeURI(f.path) }));
+      const files = (await r.json()).tree
+        .filter(f => f.type === 'blob' && /\.html?$/i.test(f.path) && f.path !== 'index.html').map(f => f.path);
+      // a folder with its own index.html is one site: hide its other pages
+      const sites = files.filter(p => /\/index\.html?$/i.test(p)).map(p => p.replace(/index\.html?$/i, ''));
+      auto = files
+        .filter(p => !sites.some(d => p.startsWith(d) && p !== d + 'index.html' && p !== d + 'index.htm'))
+        .map(p => ({ name: p.replace(/(\/index)?\.html?$/i, ''), url: encodeURI(p) }));
     } catch (e) { status('Repo scan failed (' + e.message + ').'); }
   }
   render();
