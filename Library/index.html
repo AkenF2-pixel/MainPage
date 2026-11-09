@@ -1,0 +1,223 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Shelf</title>
+<style>
+:root{--bg:#eef1ec;--sf:#fbfcfa;--ink:#1d2a2f;--mu:#5d6b70;--ac:#0f766e;--ln:#d3dbd5;--tx:#1d2a2f}
+@media(prefers-color-scheme:dark){:root{--bg:#12181a;--sf:#1a2326;--ink:#e6eeea;--mu:#98a8a4;--ac:#4fd1b5;--ln:#2b383b}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.45 system-ui,sans-serif}
+h1,h3{font-family:Georgia,serif;margin:0}
+header{display:flex;flex-wrap:wrap;gap:12px;align-items:center;padding:14px 20px;border-bottom:1px solid var(--ln)}
+header h1{font-size:26px;margin-right:auto}
+#st{color:var(--mu);font-size:13px}
+button,select,input,textarea{font:inherit;color:var(--ink);background:var(--sf);border:1px solid var(--ln);border-radius:6px;padding:6px 10px}
+button{cursor:pointer}
+button.on,button.pri{background:var(--ac);border-color:var(--ac);color:var(--bg)}
+:focus-visible{outline:2px solid var(--ac);outline-offset:2px}
+.layout{display:grid;grid-template-columns:230px 1fr;gap:20px;padding:20px;max-width:1200px;margin:auto}
+aside{display:flex;flex-direction:column;gap:10px;align-self:start}
+aside input,aside select{width:100%}
+.tagl{display:flex;flex-wrap:wrap;gap:6px}
+.tagl button{padding:2px 9px;border-radius:99px;font-size:13px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(290px,1fr));gap:14px}
+.card{background:var(--sf);border:1px solid var(--ln);border-radius:10px;padding:14px;display:flex;flex-direction:column;gap:10px}
+.top{display:flex;justify-content:space-between;gap:8px}
+.top p{margin:2px 0 0;color:var(--mu);font-size:13px}
+.ty{border:1px solid var(--ln);border-radius:4px;padding:0 5px;margin-right:5px;font-size:12px}
+.tier{min-width:34px;height:34px;display:grid;place-items:center;border-radius:6px;font-weight:700;background:var(--ln);color:var(--tx)}
+.bar{height:8px;background:var(--ln);border-radius:4px;overflow:hidden}
+.bar i{display:block;height:100%;background:var(--ac)}
+.row{display:flex;flex-wrap:wrap;gap:8px;align-items:center;font-size:13px}
+.row input{width:76px}
+.tot{color:var(--mu)}
+.tags b{display:inline-block;margin:0 6px 4px 0;font-weight:400;font-size:12px;color:var(--ac)}
+.tags b::before{content:"#"}
+.act{display:flex;gap:6px;margin-top:auto}
+.act select{flex:1}
+[data-t="S+"]{background:#ff8fa3;color:var(--tx)}[data-t="S"]{background:#ffa94d;color:var(--tx)}[data-t="A"]{background:#ffd43b;color:var(--tx)}
+[data-t="B"]{background:#c0eb75;color:var(--tx)}[data-t="C"]{background:#8ce0c6;color:var(--tx)}[data-t="D"]{background:#8fc5f2;color:var(--tx)}[data-t="F"]{background:#c5c9cf;color:var(--tx)}
+.trow{display:flex;border:1px solid var(--ln);border-radius:8px;margin-bottom:8px;background:var(--sf);min-height:60px;overflow:hidden}
+.trow.over{outline:2px dashed var(--ac)}
+.lab{width:80px;display:grid;place-items:center;font:700 20px Georgia,serif;flex:none;background:var(--ln)}
+.chips{display:flex;flex-wrap:wrap;gap:6px;padding:8px;align-content:flex-start}
+.chip{background:var(--bg);border:1px solid var(--ln);border-radius:6px;padding:4px 8px;cursor:grab;font-size:13px}
+.chip small{margin-left:6px;color:var(--mu)}
+dialog{background:var(--sf);color:var(--ink);border:1px solid var(--ln);border-radius:10px;width:min(420px,92vw)}
+dialog::backdrop{background:#0008}
+form{display:flex;flex-direction:column;gap:10px}
+form label{display:flex;flex-direction:column;gap:3px;font-size:13px;color:var(--mu)}
+.err{color:#c0392b;min-height:1em;font-size:13px}
+.empty{color:var(--mu);padding:30px 0}
+.chip.sel{outline:2px solid var(--ac)}
+.nolist aside{display:none}.nolist{grid-template-columns:1fr}
+.lf{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px}.lf input{flex:1 1 160px}
+.links{display:flex;flex-direction:column;gap:8px}.lk{display:flex;gap:8px;align-items:stretch}
+.lk a{flex:1;display:flex;flex-direction:column;background:var(--sf);border:1px solid var(--ln);border-radius:8px;padding:10px 14px;color:var(--ink);text-decoration:none;font-weight:600;overflow-wrap:anywhere}
+.lk a small{font-weight:400;color:var(--mu)}
+#fb{display:flex;flex-direction:column;gap:10px}
+summary{cursor:pointer;padding:8px 0;color:var(--mu)}
+@media(min-width:801px){#fd summary{display:none}}
+@media(max-width:800px){
+.layout{grid-template-columns:1fr;padding:12px 12px calc(84px + env(safe-area-inset-bottom));gap:12px}
+header{padding:calc(10px + env(safe-area-inset-top)) 12px 10px;gap:8px}
+header h1{font-size:22px}
+#vlib,#vtier,#vlinks{flex:1}
+#st{order:5;width:100%}
+input,select,textarea{font-size:16px}
+button,select,input{min-height:42px}
+.grid{grid-template-columns:1fr}
+.row label{flex:1;display:flex;flex-direction:column;gap:2px}
+.row input{width:100%}
+.tot{width:100%}
+.act button{padding:6px 14px}
+.lab{width:56px;font-size:17px}
+.chip{padding:8px 10px;font-size:14px}
+#add{position:fixed;right:16px;bottom:calc(16px + env(safe-area-inset-bottom));z-index:5;border-radius:99px;padding:10px 20px;box-shadow:0 4px 14px #0005}
+dialog{width:100%;max-width:none;margin:auto 0 0;max-height:92vh;overflow:auto;border-radius:14px 14px 0 0;padding-bottom:calc(16px + env(safe-area-inset-bottom))}
+}
+</style>
+</head>
+<body>
+<header>
+  <h1>Shelf</h1>
+  <span id="st"></span>
+  <button id="vlib" class="on">Library</button><button id="vtier">Tier list</button><button id="vlinks">Sources</button>
+  <button id="add" class="pri">Add item</button><button id="cfg">Sync settings</button>
+</header>
+<div class="layout">
+  <aside>
+    <input id="q" type="search" placeholder="Search title or author" aria-label="Search">
+    <details id="fd"><summary>Filters and sort</summary><div id="fb">
+    <select id="ft" aria-label="Type"><option value="">All types</option><option value="book">Books</option><option value="audio">Audiobooks</option></select>
+    <select id="fs" aria-label="Status"><option value="">Any status</option><option value="0">Not started</option><option value="1">In progress</option><option value="2">Finished</option></select>
+    <select id="so" aria-label="Sort"><option value="new">Newest first</option><option value="title">Title</option><option value="pct">Progress</option><option value="tier">Tier</option></select>
+    <div class="tagl" id="tags"></div></div></details>
+  </aside>
+  <main id="main"></main>
+</div>
+
+<dialog id="dlg"><form id="f" method="dialog">
+  <h3 id="dt">Add item</h3>
+  <label>Title<input name="title" required></label>
+  <label>Author<input name="author"></label>
+  <label>Type<select name="type"><option value="book">Book</option><option value="audio">Audiobook</option></select></label>
+  <label>Total <span id="th"></span><input name="total"></label>
+  <label>Tags (comma separated)<input name="tags"></label>
+  <label>Tier<select name="tier"></select></label>
+  <div class="err" id="err"></div>
+  <div class="act"><button class="pri">Save</button><button type="button" id="x">Cancel</button></div>
+</form></dialog>
+
+<dialog id="cd"><form id="cf" method="dialog">
+  <h3>Sync settings</h3>
+  <label>GitHub token (gist scope only)<input name="token" type="password" autocomplete="off"></label>
+  <label>Gist ID (leave empty to create a new secret gist)<input name="gist"></label>
+  <p class="tot">The token stays in this browser. It is never written to the gist.</p>
+  <div class="act"><button class="pri">Save</button><button type="button" id="cx">Cancel</button></div>
+</form></dialog>
+
+<script>
+const TIERS=['S+','S','A','B','C','D','F'],ORD=[...TIERS,''],DEF={book:300,audio:600};
+const $=s=>document.querySelector(s);
+const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+let S=JSON.parse(localStorage.getItem('bt-data')||'{"items":[]}'),cfg=JSON.parse(localStorage.getItem('bt-cfg')||'{}');
+S.links=S.links||[];
+let view='lib',F={q:'',type:'',status:'',tags:new Set(),sort:'new'},editId=null,timer,pick=null;
+
+const fmt=m=>Math.floor(m/60)+':'+String(m%60).padStart(2,'0');
+const parseT=s=>{const m=/^(\d+):([0-5]?\d)$/.exec(String(s).trim());return m?+m[1]*60+ +m[2]:null};
+const pos=i=>Math.round(i.pct/100*i.total);
+const posTxt=i=>i.type==='book'?pos(i):fmt(pos(i));
+const totTxt=i=>i.type==='book'?i.total+' pp':fmt(i.total);
+function setPct(i,v){v=parseFloat(v);if(isNaN(v))return;i.pct=Math.round(Math.min(100,Math.max(0,v))*10)/10}
+function setPos(i,v){const n=i.type==='book'?parseFloat(v):parseT(v);if(n==null||isNaN(n))return;setPct(i,n/i.total*100)}
+function parseTotal(type,s){s=s.trim();if(!s)return{total:DEF[type],est:true};const n=type==='book'?parseInt(s,10):parseT(s);return n>0?{total:n,est:false}:null}
+
+const setSt=t=>$('#st').textContent=t;
+function changed(){localStorage.setItem('bt-data',JSON.stringify(S));render();clearTimeout(timer);if(cfg.token){setSt('Saving…');timer=setTimeout(push,800)}}
+const gh=(p,o={})=>fetch('https://api.github.com'+p,{...o,headers:{Authorization:'Bearer '+cfg.token,Accept:'application/vnd.github+json','Content-Type':'application/json'}}).then(r=>{if(!r.ok)throw new Error(r.status);return r.json()});
+async function push(){try{const files={'library.json':{content:JSON.stringify(S)}};
+  if(cfg.gist)await gh('/gists/'+cfg.gist,{method:'PATCH',body:JSON.stringify({files})});
+  else{const g=await gh('/gists',{method:'POST',body:JSON.stringify({description:'Shelf library',public:false,files})});cfg.gist=g.id;localStorage.setItem('bt-cfg',JSON.stringify(cfg))}
+  setSt('Saved to gist')}catch(e){setSt('Save failed ('+e.message+'). Changes kept in this browser.')}}
+// shortcut: gist wins on load, no merge; add merging if you edit from two devices at once
+async function pull(){if(!cfg.token||!cfg.gist)return;try{const g=await gh('/gists/'+cfg.gist);S=JSON.parse(g.files['library.json'].content);S.links=S.links||[];localStorage.setItem('bt-data',JSON.stringify(S));setSt('Loaded from gist');render()}catch(e){setSt('Load failed ('+e.message+'). Showing local copy.')}}
+
+function vis(){const q=F.q.toLowerCase();
+  const a=S.items.filter(i=>(!q||(i.title+' '+i.author).toLowerCase().includes(q))&&(!F.type||i.type===F.type)
+    &&(!F.status||(F.status==='0'?i.pct===0:F.status==='1'?i.pct>0&&i.pct<100:i.pct===100))&&[...F.tags].every(t=>i.tags.includes(t)));
+  const k={title:(x,y)=>x.title.localeCompare(y.title),pct:(x,y)=>y.pct-x.pct,tier:(x,y)=>ORD.indexOf(x.tier)-ORD.indexOf(y.tier),new:(x,y)=>y.added-x.added}[F.sort];
+  return a.sort(k)}
+const card=i=>`<article class="card" data-id="${i.id}"><div class="top"><div><h3>${esc(i.title)}</h3><p><span class="ty">${i.type==='book'?'Book':'Audiobook'}</span>${esc(i.author)}</p></div><span class="tier" data-t="${i.tier}">${i.tier||'–'}</span></div>
+<div class="bar"><i style="width:${i.pct}%"></i></div>
+<div class="row"><label>Percent <input data-f="pct" value="${i.pct}" inputmode="decimal"></label><label>${i.type==='book'?'Page':'Listened'} <input data-f="pos" inputmode="${i.type==='book'?'numeric':'text'}" value="${posTxt(i)}"></label><span class="tot">of ${totTxt(i)}${i.est?' (estimated)':''}</span></div>
+<div class="tags">${i.tags.map(t=>`<b>${esc(t)}</b>`).join('')}</div>
+<div class="act"><select data-f="tier" aria-label="Tier">${['',...TIERS].map(t=>`<option value="${t}"${t===i.tier?' selected':''}>${t||'Unranked'}</option>`).join('')}</select><button data-a="edit">Edit</button><button data-a="del">Delete</button></div></article>`;
+
+function render(){
+  const a=vis(),all={};S.items.forEach(i=>i.tags.forEach(t=>all[t]=(all[t]||0)+1));
+  $('#tags').innerHTML=Object.keys(all).sort().map(t=>`<button data-tag="${esc(t)}" class="${F.tags.has(t)?'on':''}">${esc(t)} ${all[t]}</button>`).join('');
+  $('#vlib').className=view==='lib'?'on':'';$('#vtier').className=view==='tier'?'on':'';$('#vlinks').className=view==='links'?'on':'';$('.layout').classList.toggle('nolist',view==='links');
+  if(view==='links'){$('#main').innerHTML=`<form id="lf" class="lf"><input name="name" placeholder="Name, for example Libby" required aria-label="Name"><input name="url" placeholder="Website address" inputmode="url" required aria-label="Address"><button class="pri">Add link</button></form><div class="links">${S.links.length?S.links.map(l=>`<div class="lk"><a href="${esc(l.url)}" target="_blank" rel="noopener noreferrer">${esc(l.name)}<small>${esc(new URL(l.url).hostname.replace(/^www\./,''))}</small></a><button data-ld="${l.id}" aria-label="Delete ${esc(l.name)}">Delete</button></div>`).join(''):'<p class="empty">No sources yet. Add the sites where you get your audiobooks.</p>'}</div>`;return}
+  if(!a.length){$('#main').innerHTML=`<p class="empty">${S.items.length?'No items match these filters.':'Nothing here yet. Choose Add item to start your shelf.'}</p>`;return}
+  $('#main').innerHTML=view==='lib'?`<div class="grid">${a.map(card).join('')}</div>`
+    :'<p class="tot">Tap an item, then tap a tier to move it.</p>'+ORD.map(t=>`<section class="trow" data-tier="${t}"><div class="lab" data-t="${t}">${t||'Unranked'}</div><div class="chips">${a.filter(i=>i.tier===t).map(i=>`<div class="chip${pick===i.id?' sel':''}" draggable="true" data-id="${i.id}">${esc(i.title)}<small>${Math.round(i.pct)}%</small></div>`).join('')}</div></section>`).join('');
+}
+const get=id=>S.items.find(i=>i.id===id);
+
+document.addEventListener('change',e=>{const el=e.target,c=el.closest('.card');if(!c||!el.dataset.f)return;const i=get(c.dataset.id);
+  if(el.dataset.f==='pct')setPct(i,el.value);else if(el.dataset.f==='pos')setPos(i,el.value);else i.tier=el.value;changed()});
+document.addEventListener('click',e=>{const ch=e.target.closest('.chip');if(ch){pick=pick===ch.dataset.id?null:ch.dataset.id;render();return}
+  const r=e.target.closest('.trow');if(r&&pick){get(pick).tier=r.dataset.tier;pick=null;changed();return}
+  const d=e.target.closest('[data-ld]');if(d){const l=S.links.find(x=>x.id===d.dataset.ld);if(confirm('Delete “'+l.name+'”?')){S.links=S.links.filter(x=>x!==l);changed()}return}
+  const b=e.target.closest('[data-a],[data-tag]');if(!b)return;
+  if(b.dataset.tag){F.tags.has(b.dataset.tag)?F.tags.delete(b.dataset.tag):F.tags.add(b.dataset.tag);render();return}
+  const id=b.closest('.card').dataset.id;
+  if(b.dataset.a==='del'){if(confirm('Delete “'+get(id).title+'”?')){S.items=S.items.filter(i=>i.id!==id);changed()}}
+  else openForm(id)});
+$('#q').oninput=e=>{F.q=e.target.value;render()};
+$('#ft').onchange=e=>{F.type=e.target.value;render()};
+$('#fs').onchange=e=>{F.status=e.target.value;render()};
+$('#so').onchange=e=>{F.sort=e.target.value;render()};
+$('#vlib').onclick=()=>{view='lib';render()};$('#vtier').onclick=()=>{view='tier';render()};$('#vlinks').onclick=()=>{view='links';render()};
+// shortcut: only http(s) links accepted, no edit button; delete and re-add to change one
+document.addEventListener('submit',e=>{if(e.target.id!=='lf')return;e.preventDefault();const f=e.target;let u=f.url.value.trim();if(!/^https?:\/\//i.test(u))u='https://'+u;
+  try{u=new URL(u).href}catch{f.url.setCustomValidity('Enter a valid website address');f.url.reportValidity();f.url.oninput=()=>f.url.setCustomValidity('');return}
+  S.links.push({id:crypto.randomUUID(),name:f.elements.name.value.trim(),url:u});changed()});
+
+// drag and drop for mouse; tap an item, then a tier, works on touch
+let drag=null;
+document.addEventListener('dragstart',e=>{drag=e.target.dataset?.id});
+document.addEventListener('dragover',e=>{const r=e.target.closest('.trow');if(r){e.preventDefault();r.classList.add('over')}});
+document.addEventListener('dragleave',e=>e.target.closest?.('.trow')?.classList.remove('over'));
+document.addEventListener('drop',e=>{const r=e.target.closest('.trow');if(!r||!drag)return;e.preventDefault();get(drag).tier=r.dataset.tier;drag=null;changed()});
+
+const th=()=>{const t=$('#f').elements.type.value;$('#th').textContent=t==='book'?'(pages, default 300)':'(HH:MM, default 10:00)'};
+$('#f').elements.type.onchange=th;
+function openForm(id){editId=id;const i=id?get(id):null,f=$('#f');$('#dt').textContent=i?'Edit item':'Add item';$('#err').textContent='';
+  f.tier.innerHTML=['',...TIERS].map(t=>`<option value="${t}">${t||'Unranked'}</option>`).join('');
+  f.elements.title.value=i?i.title:'';f.author.value=i?i.author:'';f.elements.type.value=i?i.type:'book';
+  f.total.value=i&&!i.est?(i.type==='book'?i.total:fmt(i.total)):'';f.tags.value=i?i.tags.join(', '):'';f.tier.value=i?i.tier:'';th();$('#dlg').showModal()}
+$('#add').onclick=()=>openForm(null);$('#x').onclick=()=>$('#dlg').close();
+$('#f').onsubmit=e=>{const f=e.target,type=f.elements.type.value,t=parseTotal(type,f.total.value);
+  if(!t){e.preventDefault();$('#err').textContent=type==='book'?'Enter pages as a whole number, or leave empty.':'Enter length as HH:MM, or leave empty.';return}
+  const tags=[...new Set(f.tags.value.split(',').map(s=>s.trim()).filter(Boolean))];
+  const data={title:f.elements.title.value.trim(),author:f.author.value.trim(),type,total:t.total,est:t.est,tags,tier:f.tier.value};
+  if(editId)Object.assign(get(editId),data);else S.items.push({id:crypto.randomUUID(),pct:0,added:Date.now(),...data});
+  changed()};
+$('#cfg').onclick=()=>{const f=$('#cf');f.token.value=cfg.token||'';f.gist.value=cfg.gist||'';$('#cd').showModal()};
+$('#cx').onclick=()=>$('#cd').close();
+$('#cf').onsubmit=e=>{const f=e.target;cfg={token:f.token.value.trim(),gist:f.gist.value.trim()};localStorage.setItem('bt-cfg',JSON.stringify(cfg));
+  if(cfg.token&&cfg.gist)pull();else if(cfg.token){setSt('Saving…');push()}};
+
+if(location.hash==='#test'){const i={type:'book',total:300,pct:0},a={type:'audio',total:600,pct:0};
+  setPos(i,150);console.assert(i.pct===50,'page→pct');setPct(i,33.33);console.assert(i.pct===33.3&&pos(i)===100,'pct→page');
+  setPos(a,'2:30');console.assert(a.pct===25&&posTxt(a)==='2:30','time→pct');console.assert(parseTotal('book','').total===300&&parseTotal('audio','').est,'defaults');console.log('self-check done')}
+if(innerWidth>800)$('#fd').open=true;
+render();pull();
+</script>
+</body>
+</html>
