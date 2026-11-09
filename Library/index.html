@@ -52,6 +52,7 @@ form label{display:flex;flex-direction:column;gap:3px;font-size:13px;color:var(-
 .err{color:#c0392b;min-height:1em;font-size:13px}
 .empty{color:var(--mu);padding:30px 0}
 .chip.sel{outline:2px solid var(--ac)}
+.cv{width:56px;height:84px;object-fit:cover;border-radius:4px;flex:none;background:var(--ln)}.top>div{flex:1;min-width:0}
 .nolist aside{display:none}.nolist{grid-template-columns:1fr}
 .lf{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px}.lf input{flex:1 1 160px}
 .links{display:flex;flex-direction:column;gap:8px}.lk{display:flex;gap:8px;align-items:stretch}
@@ -103,6 +104,7 @@ dialog{width:100%;max-width:none;margin:auto 0 0;max-height:92vh;overflow:auto;b
   <h3 id="dt">Add item</h3>
   <label>Title<input name="title" required></label>
   <label>Author<input name="author"></label>
+  <label>Cover image link (optional)<input name="cover" inputmode="url"></label>
   <label>Type<select name="type"><option value="book">Book</option><option value="audio">Audiobook</option></select></label>
   <label>Total <span id="th"></span><input name="total"></label>
   <label>Tags (comma separated)<input name="tags"></label>
@@ -134,6 +136,7 @@ const posTxt=i=>i.type==='book'?pos(i):fmt(pos(i));
 const totTxt=i=>i.type==='book'?i.total+' pp':fmt(i.total);
 function setPct(i,v){v=parseFloat(v);if(isNaN(v))return;i.pct=Math.round(Math.min(100,Math.max(0,v))*10)/10}
 function setPos(i,v){const n=i.type==='book'?parseFloat(v):parseT(v);if(n==null||isNaN(n))return;setPct(i,n/i.total*100)}
+function normUrl(s){s=s.trim();if(!s)return'';if(!/^https?:\/\//i.test(s))s='https://'+s;try{return new URL(s).href}catch{return null}}
 function parseTotal(type,s){s=s.trim();if(!s)return{total:DEF[type],est:true};const n=type==='book'?parseInt(s,10):parseT(s);return n>0?{total:n,est:false}:null}
 
 const setSt=t=>$('#st').textContent=t;
@@ -151,7 +154,7 @@ function vis(){const q=F.q.toLowerCase();
     &&(!F.status||(F.status==='0'?i.pct===0:F.status==='1'?i.pct>0&&i.pct<100:i.pct===100))&&[...F.tags].every(t=>i.tags.includes(t)));
   const k={title:(x,y)=>x.title.localeCompare(y.title),pct:(x,y)=>y.pct-x.pct,tier:(x,y)=>ORD.indexOf(x.tier)-ORD.indexOf(y.tier),new:(x,y)=>y.added-x.added}[F.sort];
   return a.sort(k)}
-const card=i=>`<article class="card" data-id="${i.id}"><div class="top"><div><h3>${esc(i.title)}</h3><p><span class="ty">${i.type==='book'?'Book':'Audiobook'}</span>${esc(i.author)}</p></div><span class="tier" data-t="${i.tier}">${i.tier||'–'}</span></div>
+const card=i=>`<article class="card" data-id="${i.id}"><div class="top">${i.cover?`<img class="cv" src="${esc(i.cover)}" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.remove()">`:''}<div><h3>${esc(i.title)}</h3><p><span class="ty">${i.type==='book'?'Book':'Audiobook'}</span>${esc(i.author)}</p></div><span class="tier" data-t="${i.tier}">${i.tier||'–'}</span></div>
 <div class="bar"><i style="width:${i.pct}%"></i></div>
 <div class="row"><label>Percent <input data-f="pct" value="${i.pct}" inputmode="decimal"></label><label>${i.type==='book'?'Page':'Listened'} <input data-f="pos" inputmode="${i.type==='book'?'numeric':'text'}" value="${posTxt(i)}"></label><span class="tot">of ${totTxt(i)}${i.est?' (estimated)':''}</span></div>
 <div class="tags">${i.tags.map(t=>`<b>${esc(t)}</b>`).join('')}</div>
@@ -199,13 +202,14 @@ const th=()=>{const t=$('#f').elements.type.value;$('#th').textContent=t==='book
 $('#f').elements.type.onchange=th;
 function openForm(id){editId=id;const i=id?get(id):null,f=$('#f');$('#dt').textContent=i?'Edit item':'Add item';$('#err').textContent='';
   f.tier.innerHTML=['',...TIERS].map(t=>`<option value="${t}">${t||'Unranked'}</option>`).join('');
-  f.elements.title.value=i?i.title:'';f.author.value=i?i.author:'';f.elements.type.value=i?i.type:'book';
+  f.elements.title.value=i?i.title:'';f.author.value=i?i.author:'';f.cover.value=i&&i.cover||'';f.elements.type.value=i?i.type:'book';
   f.total.value=i&&!i.est?(i.type==='book'?i.total:fmt(i.total)):'';f.tags.value=i?i.tags.join(', '):'';f.tier.value=i?i.tier:'';th();$('#dlg').showModal()}
 $('#add').onclick=()=>openForm(null);$('#x').onclick=()=>$('#dlg').close();
 $('#f').onsubmit=e=>{const f=e.target,type=f.elements.type.value,t=parseTotal(type,f.total.value);
   if(!t){e.preventDefault();$('#err').textContent=type==='book'?'Enter pages as a whole number, or leave empty.':'Enter length as HH:MM, or leave empty.';return}
+  const cover=normUrl(f.cover.value);if(cover===null){e.preventDefault();$('#err').textContent='Enter a valid image address, or leave empty.';return}
   const tags=[...new Set(f.tags.value.split(',').map(s=>s.trim()).filter(Boolean))];
-  const data={title:f.elements.title.value.trim(),author:f.author.value.trim(),type,total:t.total,est:t.est,tags,tier:f.tier.value};
+  const data={title:f.elements.title.value.trim(),author:f.author.value.trim(),cover,type,total:t.total,est:t.est,tags,tier:f.tier.value};
   if(editId)Object.assign(get(editId),data);else S.items.push({id:crypto.randomUUID(),pct:0,added:Date.now(),...data});
   changed()};
 $('#cfg').onclick=()=>{const f=$('#cf');f.token.value=cfg.token||'';f.gist.value=cfg.gist||'';$('#cd').showModal()};
