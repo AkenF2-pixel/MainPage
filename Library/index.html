@@ -52,6 +52,8 @@ form label{display:flex;flex-direction:column;gap:3px;font-size:13px;color:var(-
 .err{color:#c0392b;min-height:1em;font-size:13px}
 .empty{color:var(--mu);padding:30px 0}
 .chip.sel{outline:2px solid var(--ac)}
+.top p.sr{color:var(--ac)}
+#res{display:flex;flex-direction:column;gap:6px;font-size:13px;color:var(--mu)}#res button{text-align:left}
 .cv{width:56px;height:84px;object-fit:cover;border-radius:4px;flex:none;background:var(--ln)}.top>div{flex:1;min-width:0}
 .nolist aside{display:none}.nolist{grid-template-columns:1fr}
 .lf{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px}.lf input{flex:1 1 160px}
@@ -94,7 +96,8 @@ dialog{width:100%;max-width:none;margin:auto 0 0;max-height:92vh;overflow:auto;b
     <details id="fd"><summary>Filters and sort</summary><div id="fb">
     <select id="ft" aria-label="Type"><option value="">All types</option><option value="book">Books</option><option value="audio">Audiobooks</option></select>
     <select id="fs" aria-label="Status"><option value="">Any status</option><option value="0">Not started</option><option value="1">In progress</option><option value="2">Finished</option></select>
-    <select id="so" aria-label="Sort"><option value="new">Newest first</option><option value="title">Title</option><option value="pct">Progress</option><option value="tier">Tier</option></select>
+    <select id="fr" aria-label="Series"></select>
+    <select id="so" aria-label="Sort"><option value="new">Newest first</option><option value="title">Title</option><option value="pct">Progress</option><option value="tier">Tier</option><option value="series">Series</option></select>
     <div class="tagl" id="tags"></div></div></details>
   </aside>
   <main id="main"></main>
@@ -103,7 +106,10 @@ dialog{width:100%;max-width:none;margin:auto 0 0;max-height:92vh;overflow:auto;b
 <dialog id="dlg"><form id="f" method="dialog">
   <h3 id="dt">Add item</h3>
   <label>Title<input name="title" required></label>
+  <button type="button" id="srch">Search online for this title</button><div id="res" aria-live="polite"></div>
   <label>Author<input name="author"></label>
+  <label>Series (optional)<input name="series" list="sl"></label><datalist id="sl"></datalist>
+  <label>Number in series<input name="sno" inputmode="decimal"></label>
   <label>Cover image link (optional)<input name="cover" inputmode="url"></label>
   <label>Type<select name="type"><option value="book">Book</option><option value="audio">Audiobook</option></select></label>
   <label>Total <span id="th"></span><input name="total"></label>
@@ -127,7 +133,7 @@ const $=s=>document.querySelector(s);
 const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 let S=JSON.parse(localStorage.getItem('bt-data')||'{"items":[]}'),cfg=JSON.parse(localStorage.getItem('bt-cfg')||'{}');
 S.links=S.links||[];
-let view='lib',F={q:'',type:'',status:'',tags:new Set(),sort:'new'},editId=null,timer,pick=null;
+let view='lib',F={q:'',type:'',status:'',tags:new Set(),sort:'new',series:''},editId=null,timer,pick=null;
 
 const fmt=m=>Math.floor(m/60)+':'+String(m%60).padStart(2,'0');
 const parseT=s=>{const m=/^(\d+):([0-5]?\d)$/.exec(String(s).trim());return m?+m[1]*60+ +m[2]:null};
@@ -151,10 +157,10 @@ async function pull(){if(!cfg.token||!cfg.gist)return;try{const g=await gh('/gis
 
 function vis(){const q=F.q.toLowerCase();
   const a=S.items.filter(i=>(!q||(i.title+' '+i.author).toLowerCase().includes(q))&&(!F.type||i.type===F.type)
-    &&(!F.status||(F.status==='0'?i.pct===0:F.status==='1'?i.pct>0&&i.pct<100:i.pct===100))&&[...F.tags].every(t=>i.tags.includes(t)));
-  const k={title:(x,y)=>x.title.localeCompare(y.title),pct:(x,y)=>y.pct-x.pct,tier:(x,y)=>ORD.indexOf(x.tier)-ORD.indexOf(y.tier),new:(x,y)=>y.added-x.added}[F.sort];
+    &&(!F.status||(F.status==='0'?i.pct===0:F.status==='1'?i.pct>0&&i.pct<100:i.pct===100))&&(!F.series||i.series===F.series)&&[...F.tags].every(t=>i.tags.includes(t)));
+  const k={title:(x,y)=>x.title.localeCompare(y.title),pct:(x,y)=>y.pct-x.pct,tier:(x,y)=>ORD.indexOf(x.tier)-ORD.indexOf(y.tier),new:(x,y)=>y.added-x.added,series:(x,y)=>!x.series-!y.series||(x.series||'').localeCompare(y.series||'')||(x.sno??1e9)-(y.sno??1e9)}[F.sort];
   return a.sort(k)}
-const card=i=>`<article class="card" data-id="${i.id}"><div class="top">${i.cover?`<img class="cv" src="${esc(i.cover)}" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.remove()">`:''}<div><h3>${esc(i.title)}</h3><p><span class="ty">${i.type==='book'?'Book':'Audiobook'}</span>${esc(i.author)}</p></div><span class="tier" data-t="${i.tier}">${i.tier||'–'}</span></div>
+const card=i=>`<article class="card" data-id="${i.id}"><div class="top">${i.cover?`<img class="cv" src="${esc(i.cover)}" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.remove()">`:''}<div><h3>${esc(i.title)}</h3><p><span class="ty">${i.type==='book'?'Book':'Audiobook'}</span>${esc(i.author)}</p>${i.series?`<p class="sr">${esc(i.series)}${i.sno!=null?' #'+i.sno:''}</p>`:''}</div><span class="tier" data-t="${i.tier}">${i.tier||'–'}</span></div>
 <div class="bar"><i style="width:${i.pct}%"></i></div>
 <div class="row"><label>Percent <input data-f="pct" value="${i.pct}" inputmode="decimal"></label><label>${i.type==='book'?'Page':'Listened'} <input data-f="pos" inputmode="${i.type==='book'?'numeric':'text'}" value="${posTxt(i)}"></label><span class="tot">of ${totTxt(i)}${i.est?' (estimated)':''}</span></div>
 <div class="tags">${i.tags.map(t=>`<b>${esc(t)}</b>`).join('')}</div>
@@ -162,6 +168,9 @@ const card=i=>`<article class="card" data-id="${i.id}"><div class="top">${i.cove
 
 function render(){
   const a=vis(),all={};S.items.forEach(i=>i.tags.forEach(t=>all[t]=(all[t]||0)+1));
+  const ser=[...new Set(S.items.map(i=>i.series).filter(Boolean))].sort();if(F.series&&!ser.includes(F.series))F.series='';
+  $('#fr').innerHTML='<option value="">All series</option>'+ser.map(x=>`<option${x===F.series?' selected':''}>${esc(x)}</option>`).join('');
+  $('#sl').innerHTML=ser.map(x=>`<option value="${esc(x)}">`).join('');
   $('#tags').innerHTML=Object.keys(all).sort().map(t=>`<button data-tag="${esc(t)}" class="${F.tags.has(t)?'on':''}">${esc(t)} ${all[t]}</button>`).join('');
   $('#vlib').className=view==='lib'?'on':'';$('#vtier').className=view==='tier'?'on':'';$('#vlinks').className=view==='links'?'on':'';$('.layout').classList.toggle('nolist',view==='links');
   if(view==='links'){$('#main').innerHTML=`<form id="lf" class="lf"><input name="name" placeholder="Name, for example Libby" required aria-label="Name"><input name="url" placeholder="Website address" inputmode="url" required aria-label="Address"><button class="pri">Add link</button></form><div class="links">${S.links.length?S.links.map(l=>`<div class="lk"><a href="${esc(l.url)}" target="_blank" rel="noopener noreferrer">${esc(l.name)}<small>${esc(new URL(l.url).hostname.replace(/^www\./,''))}</small></a><button data-ld="${l.id}" aria-label="Delete ${esc(l.name)}">Delete</button></div>`).join(''):'<p class="empty">No sources yet. Add the sites where you get your audiobooks.</p>'}</div>`;return}
@@ -173,7 +182,18 @@ const get=id=>S.items.find(i=>i.id===id);
 
 document.addEventListener('change',e=>{const el=e.target,c=el.closest('.card');if(!c||!el.dataset.f)return;const i=get(c.dataset.id);
   if(el.dataset.f==='pct')setPct(i,el.value);else if(el.dataset.f==='pos')setPos(i,el.value);else i.tier=el.value;changed()});
-document.addEventListener('click',e=>{const ch=e.target.closest('.chip');if(ch){pick=pick===ch.dataset.id?null:ch.dataset.id;render();return}
+let found=[];
+$('#srch').onclick=async()=>{const q=$('#f').elements.title.value.trim(),r=$('#res');if(!q){r.textContent='Type a title first.';return}
+  r.textContent='Searching…';
+  try{const x=await fetch('https://openlibrary.org/search.json?limit=5&fields=title,author_name,cover_i,number_of_pages_median,first_publish_year&q='+encodeURIComponent(q));if(!x.ok)throw 0;found=(await x.json()).docs;
+    r.innerHTML=found.length?found.map((b,n)=>`<button type="button" data-pick="${n}">${esc(b.title)} by ${esc((b.author_name||['unknown author'])[0])}${b.first_publish_year?' ('+b.first_publish_year+')':''}</button>`).join(''):'No results. Try fewer words.'}
+  catch{r.textContent='Search failed. Check your connection and try again.'}};
+function fillFrom(b){const f=$('#f');f.elements.title.value=b.title;f.author.value=(b.author_name||[''])[0];
+  if(b.cover_i)f.cover.value='https://covers.openlibrary.org/b/id/'+b.cover_i+'-M.jpg';
+  if(f.elements.type.value==='book'&&!f.total.value.trim()&&b.number_of_pages_median)f.total.value=b.number_of_pages_median;
+  $('#res').textContent='Filled from Open Library. Check the details, then save.'}
+document.addEventListener('click',e=>{const pk=e.target.closest('[data-pick]');if(pk){fillFrom(found[+pk.dataset.pick]);return}
+  const ch=e.target.closest('.chip');if(ch){pick=pick===ch.dataset.id?null:ch.dataset.id;render();return}
   const r=e.target.closest('.trow');if(r&&pick){get(pick).tier=r.dataset.tier;pick=null;changed();return}
   const d=e.target.closest('[data-ld]');if(d){const l=S.links.find(x=>x.id===d.dataset.ld);if(confirm('Delete “'+l.name+'”?')){S.links=S.links.filter(x=>x!==l);changed()}return}
   const b=e.target.closest('[data-a],[data-tag]');if(!b)return;
@@ -184,6 +204,7 @@ document.addEventListener('click',e=>{const ch=e.target.closest('.chip');if(ch){
 $('#q').oninput=e=>{F.q=e.target.value;render()};
 $('#ft').onchange=e=>{F.type=e.target.value;render()};
 $('#fs').onchange=e=>{F.status=e.target.value;render()};
+$('#fr').onchange=e=>{F.series=e.target.value;render()};
 $('#so').onchange=e=>{F.sort=e.target.value;render()};
 $('#vlib').onclick=()=>{view='lib';render()};$('#vtier').onclick=()=>{view='tier';render()};$('#vlinks').onclick=()=>{view='links';render()};
 // shortcut: only http(s) links accepted, no edit button; delete and re-add to change one
@@ -202,14 +223,15 @@ const th=()=>{const t=$('#f').elements.type.value;$('#th').textContent=t==='book
 $('#f').elements.type.onchange=th;
 function openForm(id){editId=id;const i=id?get(id):null,f=$('#f');$('#dt').textContent=i?'Edit item':'Add item';$('#err').textContent='';
   f.tier.innerHTML=['',...TIERS].map(t=>`<option value="${t}">${t||'Unranked'}</option>`).join('');
-  f.elements.title.value=i?i.title:'';f.author.value=i?i.author:'';f.cover.value=i&&i.cover||'';f.elements.type.value=i?i.type:'book';
+  f.elements.title.value=i?i.title:'';f.author.value=i?i.author:'';f.cover.value=i&&i.cover||'';f.series.value=i&&i.series||'';f.sno.value=i&&i.sno!=null?i.sno:'';$('#res').textContent='';f.elements.type.value=i?i.type:'book';
   f.total.value=i&&!i.est?(i.type==='book'?i.total:fmt(i.total)):'';f.tags.value=i?i.tags.join(', '):'';f.tier.value=i?i.tier:'';th();$('#dlg').showModal()}
 $('#add').onclick=()=>openForm(null);$('#x').onclick=()=>$('#dlg').close();
 $('#f').onsubmit=e=>{const f=e.target,type=f.elements.type.value,t=parseTotal(type,f.total.value);
   if(!t){e.preventDefault();$('#err').textContent=type==='book'?'Enter pages as a whole number, or leave empty.':'Enter length as HH:MM, or leave empty.';return}
   const cover=normUrl(f.cover.value);if(cover===null){e.preventDefault();$('#err').textContent='Enter a valid image address, or leave empty.';return}
+  const sno=f.sno.value.trim()===''?null:Number(f.sno.value);if(sno!==null&&isNaN(sno)){e.preventDefault();$('#err').textContent='Series number must be a number, or leave empty.';return}
   const tags=[...new Set(f.tags.value.split(',').map(s=>s.trim()).filter(Boolean))];
-  const data={title:f.elements.title.value.trim(),author:f.author.value.trim(),cover,type,total:t.total,est:t.est,tags,tier:f.tier.value};
+  const data={title:f.elements.title.value.trim(),author:f.author.value.trim(),cover,series:f.series.value.trim(),sno:f.series.value.trim()?sno:null,type,total:t.total,est:t.est,tags,tier:f.tier.value};
   if(editId)Object.assign(get(editId),data);else S.items.push({id:crypto.randomUUID(),pct:0,added:Date.now(),...data});
   changed()};
 $('#cfg').onclick=()=>{const f=$('#cf');f.token.value=cfg.token||'';f.gist.value=cfg.gist||'';$('#cd').showModal()};
