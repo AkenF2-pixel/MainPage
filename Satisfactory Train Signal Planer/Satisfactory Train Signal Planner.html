@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>Satisfactory Train Signal Planner</title>
+<style>
+:root{box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);--bg:#f6f4ef;--fg:#1e2127;--grid:#c9c6bd;--rail:#4d5662;--panel:#e8e5dc;--line:#b5b1a5}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){color-scheme:dark;--bg:#1a1d21;--fg:#e6e4de;--grid:#3a3f46;--rail:#a9b3c0;--panel:#25292f;--line:#4a5058}}
+:root[data-theme="dark"]{color-scheme:dark;--bg:#1a1d21;--fg:#e6e4de;--grid:#3a3f46;--rail:#a9b3c0;--panel:#25292f;--line:#4a5058}
+body{touch-action:pan-x pan-y;margin:0;background:var(--bg);color:var(--fg);font:14px/1.45 "Segoe UI",system-ui,sans-serif}
+#bar{display:flex;flex-wrap:wrap;gap:6px;align-items:center;padding:8px 10px;background:var(--panel);border-bottom:1px solid var(--line)}
+button,input,textarea{font:inherit;color:inherit;background:var(--bg);border:1px solid var(--line);border-radius:4px;padding:4px 10px}
+button{cursor:pointer}button.on{border-color:#3b82f6;box-shadow:0 0 0 2px #3b82f6}
+button:focus-visible,input:focus-visible,textarea:focus-visible{outline:2px solid #3b82f6}
+input[type=number]{width:70px}
+#wrap{overflow:auto;max-width:100%}canvas{display:block}
+#info{padding:8px 10px;max-width:90ch}#info p{margin:4px 0}
+textarea{width:100%;max-width:90ch;height:60px;display:block;margin:6px 10px}
+</style></head><body>
+<div id="bar">
+<button data-t="bi">Bidirectional</button><button data-t="one">One-way</button><button data-t="dbl">Double track</button>
+<button data-t="st">Station</button><button data-t="er">Erase</button>
+<label>Block length (m) <input id="sp" type="number" min="100" step="100" value="300"></label>
+<button id="ex">Export</button><button id="im">Import</button><button id="cl">Clear</button>
+<button id="zo" aria-label="Zoom out">−</button><span id="zl">100%</span><button id="zi" aria-label="Zoom in">+</button>
+</div>
+<div id="wrap"><canvas id="cv"></canvas></div>
+<div id="info"><p id="st"></p>
+<p>Red circle = block signal. Blue square = path signal. The triangle shows the direction a signal faces. Signals sit on the right of travel. 1 cell = 100 m.</p>
+<p>Scroll to zoom at the pointer. Signals and rails keep their screen size, so zoom in to spread crowded junctions apart. Right-drag or use the scrollbars to pan. Click two grid points to lay a rail. One-way rails run from the first point to the second. Bidirectional rails carry one train at a time. Path blocks must be level in game, and this planner is flat, so check slopes yourself.</p></div>
+<textarea id="io" aria-label="Layout JSON" placeholder="Export fills this box. Paste JSON here and press Import."></textarea>
+<script>
+const C=50,W=40,H=24,cv=document.getElementById('cv'),g=cv.getContext('2d');
+const BW=(W+2)*C,BH=(H+2)*C,wrap=document.getElementById('wrap'),zl=document.getElementById('zl');let z=1;cv.width=BW;cv.height=BH;
+let edges=[],stations=new Set(),tool='bi',first=null,hover=null,spacing=300;
+const sp=document.getElementById('sp'),io=document.getElementById('io');
+try{const s=JSON.parse(localStorage.getItem('tsp')||'null');if(s){edges=s.edges;stations=new Set(s.stations);spacing=s.spacing||300}}catch(e){}
+sp.value=spacing;
+const data=()=>({edges,stations:[...stations],spacing});
+const save=()=>{try{localStorage.setItem('tsp',JSON.stringify(data()))}catch(e){}};
+const xy=k=>{const[x,y]=k.split(',').map(Number);return[(x+1)*C,(y+1)*C]};
+function node(e){const r=cv.getBoundingClientRect(),f=BW/r.width;
+ const c=v=>Math.max(0,Math.min(v,v));return[Math.max(0,Math.min(W,Math.round((e.clientX-r.left)*f/C)-1)),Math.max(0,Math.min(H,Math.round((e.clientY-r.top)*f/C)-1))].join(',')}
+const dseg=(p,a,b)=>{const l=(b[0]-a[0])**2+(b[1]-a[1])**2,u=Math.max(0,Math.min(1,((p[0]-a[0])*(b[0]-a[0])+(p[1]-a[1])*(b[1]-a[1]))/l));return Math.hypot(p[0]-a[0]-u*(b[0]-a[0]),p[1]-a[1]-u*(b[1]-a[1]))};
+const along=(pts,d)=>{for(let i=0;i<pts.length-1;i++){const a=pts[i],b=pts[i+1],l=Math.hypot(b[0]-a[0],b[1]-a[1]);if(d<=l||i==pts.length-2){const u=Math.min(d/l,1);return{x:a[0]+(b[0]-a[0])*u,y:a[1]+(b[1]-a[1])*u,dx:(b[0]-a[0])/l,dy:(b[1]-a[1])/l}}d-=l}};
+function compute(){
+ const adj={};edges.forEach(e=>{(adj[e.a]??=[]).push(e);(adj[e.b]??=[]).push(e)});
+ const deg=n=>(adj[n]||[]).length,other=(e,n)=>e.a==n?e.b:e.a;
+ const pass=n=>{const[a,b]=adj[n];return a.t==b.t&&(a.t!='one'||(a.b==n&&b.a==n)||(b.b==n&&a.a==n))};
+ const bd=n=>deg(n)!=2||stations.has(n)||!pass(n);
+ const seen=new Set(),sig=[],dead=[];
+ for(const n in adj){if(deg(n)==1&&!stations.has(n))dead.push(n);if(!bd(n))continue;
+  for(const e0 of adj[n]){if(seen.has(e0))continue;
+   const p=[n];let e=e0,c=n;
+   for(;;){seen.add(e);c=other(e,c);p.push(c);if(bd(c))break;e=adj[c].find(x=>x!==e)}
+   const t=e0.t,trs=t=='one'?[e0.a==n?p:[...p].reverse()]:[p,[...p].reverse()];
+   for(const q of trs){
+    const pts=q.map(xy),len=pts.slice(1).reduce((s,b,i)=>s+Math.hypot(b[0]-pts[i][0],b[1]-pts[i][1]),0),last=q[q.length-1],o=Math.min(18/z,len/3);
+    sig.push({...along(pts,o),k:t=='bi'?'path':'block'});
+    if(deg(last)>=3)sig.push({...along(pts,len-o),k:'path'});
+    else if(stations.has(last))sig.push({...along(pts,len-o),k:'block'});
+    if(t!='bi')for(let d=spacing/100*C;d<len-4;d+=spacing/100*C)sig.push({...along(pts,d),k:'block'});
+   }}}
+ return{sig,dead};
+}
+function arrow(x,y,dx,dy,s){g.beginPath();g.moveTo(x+dx*s,y+dy*s);g.lineTo(x-dx*s-dy*s*.8,y-dy*s+dx*s*.8);g.lineTo(x-dx*s+dy*s*.8,y-dy*s-dx*s*.8);g.fill()}
+function draw(){
+ const cs=getComputedStyle(document.documentElement),col=v=>cs.getPropertyValue(v);
+ g.setTransform(1,0,0,1,0,0);g.clearRect(0,0,cv.width,cv.height);g.setTransform(z,0,0,z,0,0);const k=1/z;g.fillStyle=col('--grid');
+ for(let x=0;x<=W;x++)for(let y=0;y<=H;y++)g.fillRect((x+1)*C-k,(y+1)*C-k,2*k,2*k);
+ g.strokeStyle=g.fillStyle=col('--rail');g.lineCap='round';
+ for(const e of edges){const[ax,ay]=xy(e.a),[bx,by]=xy(e.b),l=Math.hypot(bx-ax,by-ay),dx=(bx-ax)/l,dy=(by-ay)/l,mx=(ax+bx)/2,my=(ay+by)/2;
+  const off=e.t=='dbl'?4*k:0,nx=-dy*off,ny=dx*off;
+  g.lineWidth=(e.t=='bi'?5:3)*k;
+  for(const s of e.t=='dbl'?[1,-1]:[0]){g.beginPath();g.moveTo(ax+nx*s,ay+ny*s);g.lineTo(bx+nx*s,by+ny*s);g.stroke();
+   if(e.t!='bi'){const f=s>=0?1:-1;arrow(mx+nx*s,my+ny*s,dx*f,dy*f,5*k)}}}
+ for(const s of stations){const[x,y]=xy(s);g.fillStyle='#f2c230';g.strokeStyle='#222';g.lineWidth=2*k;g.fillRect(x-8*k,y-8*k,16*k,16*k);g.strokeRect(x-8*k,y-8*k,16*k,16*k)}
+ const{sig,dead}=compute();let b=0,p=0;
+ for(const s of sig){const px=s.x-s.dy*10*k,py=s.y+s.dx*10*k;g.fillStyle=s.k=='path'?'#3b82f6':'#e5484d';
+  if(s.k=='path'){p++;g.fillRect(px-5*k,py-5*k,10*k,10*k)}else{b++;g.beginPath();g.arc(px,py,5.5*k,0,7);g.fill()}
+  arrow(px+s.dx*10*k,py+s.dy*10*k,s.dx,s.dy,4*k)}
+ g.strokeStyle='#e5484d';g.lineWidth=2.5*k;for(const n of dead){const[x,y]=xy(n),q=7*k;g.beginPath();g.moveTo(x-q,y-q);g.lineTo(x+q,y+q);g.moveTo(x+q,y-q);g.lineTo(x-q,y+q);g.stroke()}
+ for(const n of[first,hover])if(n){const[x,y]=xy(n);g.strokeStyle='#3b82f6';g.lineWidth=2*k;g.beginPath();g.arc(x,y,7*k,0,7);g.stroke()}
+ document.getElementById('st').textContent=`Block signals: ${b}. Path signals: ${p}.`+(dead.length?` Red X = dead end with no exit signal. Put a station there.`:'');
+}
+cv.onmousemove=e=>{hover=node(e);draw()};
+cv.onclick=e=>{const n=node(e);
+ if(tool=='st')stations.has(n)?stations.delete(n):stations.add(n);
+ else if(tool=='er'){const r=cv.getBoundingClientRect(),f=BW/r.width,pt=[(e.clientX-r.left)*f,(e.clientY-r.top)*f];
+  const i=edges.findIndex(d=>dseg(pt,xy(d.a),xy(d.b))<9/z);if(stations.has(n))stations.delete(n);else if(i>=0)edges.splice(i,1)}
+ else if(!first)first=n;
+ else{if(n!=first&&!edges.some(d=>(d.a==first&&d.b==n)||(d.a==n&&d.b==first)))edges.push({a:first,b:n,t:tool});first=null}
+ save();draw()};
+document.onkeydown=e=>{if(e.key=='Escape'){first=null;draw()}};
+const tb=[...document.querySelectorAll('[data-t]')];
+tb.forEach(b=>b.onclick=()=>{tool=b.dataset.t;first=null;tb.forEach(x=>x.classList.toggle('on',x==b));draw()});
+tb[0].classList.add('on');
+sp.onchange=()=>{spacing=Math.max(100,+sp.value||300);sp.value=spacing;save();draw()};
+document.getElementById('ex').onclick=()=>{io.value=JSON.stringify(data());io.select()};
+document.getElementById('im').onclick=()=>{try{const s=JSON.parse(io.value);edges=s.edges;stations=new Set(s.stations);spacing=s.spacing||300;sp.value=spacing;save();draw()}catch(e){io.value='Could not read that JSON.'}};
+document.getElementById('cl').onclick=()=>{edges=[];stations=new Set();first=null;save();draw()};
+function setZ(nz,ax,ay){nz=Math.max(.4,Math.min(4,nz));const r=cv.getBoundingClientRect(),lx=(ax-r.left)/z,ly=(ay-r.top)/z;
+ z=nz;cv.style.width=BW*z+'px';cv.width=BW*z;cv.height=BH*z;draw();
+ const r2=cv.getBoundingClientRect();wrap.scrollLeft+=r2.left+lx*z-ax;wrap.scrollTop+=r2.top+ly*z-ay;zl.textContent=Math.round(z*100)+'%'}
+wrap.addEventListener('wheel',e=>{e.preventDefault();setZ(z*Math.exp(-e.deltaY*.0015),e.clientX,e.clientY)},{passive:false});
+const mid=k=>{const r=wrap.getBoundingClientRect();setZ(z*k,r.left+r.width/2,r.top+r.height/2)};
+document.getElementById('zi').onclick=()=>mid(1.25);document.getElementById('zo').onclick=()=>mid(.8);
+let pan=null;cv.addEventListener('mousedown',e=>{if(e.button){pan=[e.clientX,e.clientY];e.preventDefault()}});
+addEventListener('mousemove',e=>{if(pan){wrap.scrollLeft-=e.clientX-pan[0];wrap.scrollTop-=e.clientY-pan[1];pan=[e.clientX,e.clientY]}});
+addEventListener('mouseup',()=>pan=null);cv.oncontextmenu=e=>e.preventDefault();
+let pd=0;const td=t=>Math.hypot(t[0].clientX-t[1].clientX,t[0].clientY-t[1].clientY);
+wrap.addEventListener('touchstart',e=>{if(e.touches.length==2)pd=td(e.touches)},{passive:true});
+wrap.addEventListener('touchmove',e=>{if(e.touches.length==2){e.preventDefault();const[a,b]=e.touches,d=td(e.touches);setZ(z*d/pd,(a.clientX+b.clientX)/2,(a.clientY+b.clientY)/2);pd=d}},{passive:false});
+addEventListener('wheel',e=>{if(e.ctrlKey)e.preventDefault()},{passive:false});
+document.addEventListener('gesturestart',e=>e.preventDefault());
+draw();
+</script></body></html>
